@@ -19,19 +19,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.9
+import QtQuick 2.15
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
 import MuseScore.UserScores 1.0
-import MuseScore.Instruments 1.0
+import MuseScore.InstrumentsScene 1.0
 
 Item {
     id: root
 
     property string preferredScoreCreationMode: ""
+
+    property NavigationSection navigationSection: null
 
     property bool hasSelection: {
         if (pagesStack.currentIndex === 0) {
@@ -47,12 +49,19 @@ Item {
         var result = {}
 
         if (pagesStack.currentIndex === 0) {
-            result["instruments"] = instrumentsPage.selectedInstruments()
+            var parts = {}
+            parts["instruments"] = instrumentsPage.selectedInstruments()
+            result["parts"] = parts
+            result["scoreOrder"] = instrumentsPage.selectedScoreOrder
         } else if (pagesStack.currentIndex === 1) {
             result["templatePath"] = templatePage.selectedTemplatePath
         }
 
         return result
+    }
+
+    function focusOnFirst() {
+        chooseInstrumentsBtn.navigation.requestActive()
     }
 
     TabBar {
@@ -64,16 +73,34 @@ Item {
         contentHeight: 28
         spacing: 0
 
+        NavigationPanel {
+            id: topNavPanel
+            name: "ChooseTabPanel"
+            section: root.navigationSection
+            order: 1
+        }
+
         StyledTabButton {
+            id: chooseInstrumentsBtn
             text: qsTrc("userscores", "Choose instruments")
             sideMargin: 22
             isCurrent: bar.currentIndex === 0
+
+            navigation.name: "Choose instruments"
+            navigation.panel: topNavPanel
+            navigation.column: 1
+            onNavigationTriggered: bar.currentIndex = 0
         }
 
         StyledTabButton {
             text: qsTrc("userscores", "Choose from template")
             sideMargin: 22
             isCurrent: bar.currentIndex === 1
+
+            navigation.name: "Choose instruments"
+            navigation.panel: topNavPanel
+            navigation.column: 2
+            onNavigationTriggered: bar.currentIndex = 1
         }
 
         Component.onCompleted: {
@@ -98,10 +125,12 @@ Item {
 
         ChooseInstrumentsPage {
             id: instrumentsPage
+            navigationSection: root.navigationSection
         }
 
         ChooseTemplatePage {
             id: templatePage
+            navigationSection: root.navigationSection
         }
     }
 }

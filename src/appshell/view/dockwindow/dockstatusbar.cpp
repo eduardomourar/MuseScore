@@ -19,50 +19,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "dockstatusbar.h"
 
-#include <QWidget>
+#include "dockstatusbar.h"
 
 using namespace mu::dock;
 
 DockStatusBar::DockStatusBar(QQuickItem* parent)
-    : DockView(parent)
+    : DockBase(parent)
 {
-    setHeight(40);
+    setAllowedAreas(Qt::BottomDockWidgetArea);
 
-    connect(this, &DockStatusBar::visibleEdited, this, [this](bool visible) {
-        if (view() && view()->isVisible() != visible) {
-            view()->setVisible(visible);
-        }
-    });
+    constexpr int STATUS_BAR_HEIGHT = 36;
+
+    setMinimumHeight(STATUS_BAR_HEIGHT);
+    setMaximumHeight(STATUS_BAR_HEIGHT);
+    setHeight(STATUS_BAR_HEIGHT);
 }
 
-DockStatusBar::~DockStatusBar()
+DockType DockStatusBar::type() const
 {
-}
-
-DockStatusBar::Widget DockStatusBar::widget() const
-{
-    return m_widget;
-}
-
-bool DockStatusBar::visible() const
-{
-    return m_visible;
-}
-
-void DockStatusBar::setVisible(bool visible)
-{
-    if (m_visible == visible) {
-        return;
-    }
-
-    m_visible = visible;
-    emit visibleEdited(m_visible);
-}
-
-void DockStatusBar::onComponentCompleted()
-{
-    m_widget.widget = view();
-    m_widget.widget->setFixedHeight(height());
+    return DockType::StatusBar;
 }

@@ -26,16 +26,20 @@
 #include <memory>
 #include <QString>
 #include <QList>
+#include <QVariantMap>
+
 #include "async/channel.h"
 #include "async/notification.h"
+
+class QWindow;
 
 namespace mu::ui {
 class INavigationSection;
 class INavigationPanel;
 class INavigationControl;
 
-using PanelControl = std::tuple<INavigationPanel*, INavigationControl*>;
-using SectionPanelControl = std::tuple<INavigationSection*, INavigationPanel*, INavigationControl*>;
+using PanelControlChannel = async::Channel<INavigationPanel*, INavigationControl*>;
+using SectionPanelControlChannel = async::Channel<INavigationSection*, INavigationPanel*, INavigationControl*>;
 
 class INavigation
 {
@@ -51,11 +55,16 @@ public:
             Right,
             Up,
             Down,
-            Escape
+            Trigger,
+            Escape,
+
+            // Internal events
+            AboutActive // sending before activation
         };
 
         Type type = Undefined;
         bool accepted = false;
+        QVariantMap data; // additional data
 
         Event(Type t)
             : type(t) {}
@@ -71,6 +80,10 @@ public:
 
         void setOrder(int n) { column = n; }
         int order() const { return column; }
+
+        inline bool operator ==(const Index& idx) const { return column == idx.column && row == idx.row; }
+
+        std::string to_string() const { return std::string("[") + std::to_string(row) + "," + std::to_string(column) + "]"; }
     };
 
     virtual QString name() const = 0;
@@ -88,15 +101,19 @@ public:
     virtual void onEvent(EventPtr e) = 0;
 };
 
+class INavigationPanel;
 class INavigationControl : public INavigation
 {
 public:
     virtual ~INavigationControl() = default;
 
+    virtual INavigationPanel* panel() const = 0;
+
     virtual void trigger() = 0;
-    virtual async::Channel<INavigationControl*> forceActiveRequested() const = 0;
+    virtual async::Channel<INavigationControl*> activeRequested() const = 0;
 };
 
+class INavigationSection;
 class INavigationPanel : public INavigation
 {
 public:
@@ -109,10 +126,11 @@ public:
         Both
     };
 
+    virtual INavigationSection* section() const = 0;
     virtual Direction direction() const = 0;
     virtual const std::set<INavigationControl*>& controls() const = 0;
     virtual async::Notification controlsListChanged() const = 0;
-    virtual async::Channel<PanelControl> forceActiveRequested() const = 0;
+    virtual PanelControlChannel activeRequested() const = 0;
 };
 
 class INavigationSection : public INavigation
@@ -120,9 +138,18 @@ class INavigationSection : public INavigation
 public:
     virtual ~INavigationSection() = default;
 
+    //! NOTE Please sync with view/NavigationSection::Type
+    enum class Type {
+        Regular = 0,
+        //! NOTE If activated exclusive section, we shouldn't navigate to another section.
+        //! Typically exclusive section - this is dialog
+        Exclusive
+    };
+
+    virtual Type type() const = 0;
     virtual const std::set<INavigationPanel*>& panels() const = 0;
     virtual async::Notification panelsListChanged() const = 0;
-    virtual async::Channel<SectionPanelControl> forceActiveRequested() const = 0;
+    virtual SectionPanelControlChannel activeRequested() const = 0;
 };
 }
 

@@ -29,6 +29,8 @@
 #include "retval.h"
 #include "io/path.h"
 #include "userscorestypes.h"
+#include "notation/inotation.h"
+#include "async/channel.h"
 
 namespace mu::userscores {
 class IUserScoresConfiguration : MODULE_EXPORT_INTERFACE
@@ -45,11 +47,13 @@ public:
 
     virtual io::paths availableTemplatesPaths() const = 0;
 
-    virtual ValCh<io::path> templatesPath() const = 0;
-    virtual void setTemplatesPath(const io::path& path) = 0;
+    virtual io::path userTemplatesPath() const = 0;
+    virtual void setUserTemplatesPath(const io::path& path) = 0;
+    virtual async::Channel<io::path> userTemplatesPathChanged() const = 0;
 
-    virtual ValCh<io::path> scoresPath() const = 0;
-    virtual void setScoresPath(const io::path& path) = 0;
+    virtual io::path userScoresPath() const = 0;
+    virtual void setUserScoresPath(const io::path& path) = 0;
+    virtual async::Channel<io::path> userScoresPathChanged() const = 0;
 
     virtual io::path defaultSavingFilePath(const io::path& fileName) const = 0;
 
@@ -63,6 +67,9 @@ public:
 
     virtual PreferredScoreCreationMode preferredScoreCreationMode() const = 0;
     virtual void setPreferredScoreCreationMode(PreferredScoreCreationMode mode) = 0;
+
+    virtual bool needShowWarningAboutUnsavedScore() const = 0;
+    virtual void setNeedShowWarningAboutUnsavedScore(bool value) = 0;
 };
 }
 

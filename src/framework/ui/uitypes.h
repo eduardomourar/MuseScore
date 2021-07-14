@@ -141,6 +141,8 @@ struct UiContext
         return std::strcmp(const_data, ctx.const_data) == 0;
     }
 
+    std::string toString() const { return std::string(const_data); }
+
 private:
     const char* const_data = nullptr;
 };
@@ -276,6 +278,23 @@ struct MenuItem : public UiAction
     }
 };
 using MenuItemList = QList<MenuItem>;
+
+struct ToolConfig
+{
+    struct Item
+    {
+        actions::ActionCode action;
+        bool show = true;
+
+        Item() = default;
+        Item(const actions::ActionCode& a, bool sh)
+            : action(a), show(sh) {}
+    };
+
+    QList<Item> items;
+
+    bool isValid() const { return !items.isEmpty(); }
+};
 }
 
-#endif // MU_UI_UIERRORS_H
+#endif // MU_UI_UITYPES_H

@@ -31,9 +31,9 @@ public:
     SineSource();
     ~SineSource() = default;
 
-    unsigned int streamCount() const override;
+    unsigned int audioChannelsCount() const override;
 
-    void forward(unsigned int sampleCount) override;
+    void process(float* buffer, unsigned int sampleCount) override;
 
 private:
     float m_frequency = 1'000.f;

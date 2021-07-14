@@ -49,7 +49,7 @@ double PaletteConfiguration::paletteScaling() const
 
 void PaletteConfiguration::setPaletteScaling(double scale)
 {
-    settings()->setValue(PALETTE_SCALE, Val(scale));
+    settings()->setSharedValue(PALETTE_SCALE, Val(scale));
 }
 
 bool PaletteConfiguration::isSinglePalette() const
@@ -59,7 +59,7 @@ bool PaletteConfiguration::isSinglePalette() const
 
 void PaletteConfiguration::setIsSinglePalette(bool isSingle)
 {
-    settings()->setValue(PALETTE_USE_SINGLE, Val(isSingle));
+    settings()->setSharedValue(PALETTE_USE_SINGLE, Val(isSingle));
 }
 
 QColor PaletteConfiguration::elementsBackgroundColor() const
@@ -94,12 +94,12 @@ mu::async::Notification PaletteConfiguration::colorsChanged() const
 
 mu::io::path PaletteConfiguration::keySignaturesDirPath() const
 {
-    return globalConfiguration()->dataPath() + "/keysigs";
+    return globalConfiguration()->userAppDataPath() + "/keysigs";
 }
 
 mu::io::path PaletteConfiguration::timeSignaturesDirPath() const
 {
-    return globalConfiguration()->dataPath() + "/timesigs";
+    return globalConfiguration()->userAppDataPath() + "/timesigs";
 }
 
 bool PaletteConfiguration::useFactorySettings() const

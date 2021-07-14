@@ -112,7 +112,7 @@ elseif(OS_IS_WASM)
         -O3 \
     ")
 else()
-    message(FATAL_ERROR "Unsopported Platform: ${CMAKE_HOST_SYSTEM_NAME}")
+    message(FATAL_ERROR "Unsupported Platform: ${CMAKE_HOST_SYSTEM_NAME}")
 endif()
 
 ###########################################
@@ -141,8 +141,9 @@ if (BUILD_TELEMETRY_MODULE)
 endif(BUILD_TELEMETRY_MODULE)
 
 set(LINK_LIB ${LINK_LIB}
-    libmscore
+    engraving
     actions
+    accessibility
     appshell
     context
     shortcuts
@@ -151,12 +152,14 @@ set(LINK_LIB ${LINK_LIB}
     midi
     midi_old
     userscores
+    learn
     notation
+    project
     commonscene
     palette
     inspector
     playback
-    instruments
+    instrumentsscene
     converter
     )
 
@@ -171,13 +174,16 @@ if (NOT CC_IS_EMSCRIPTEN)
     list(APPEND LINK_LIB iex_bww)
     list(APPEND LINK_LIB iex_capella)
     list(APPEND LINK_LIB iex_guitarpro)
-    list(APPEND LINK_LIB iex_midiimport)
+    list(APPEND LINK_LIB iex_midi)
     list(APPEND LINK_LIB iex_musedata)
     list(APPEND LINK_LIB iex_ove)
     list(APPEND LINK_LIB iex_audioexport)
     list(APPEND LINK_LIB iex_imagesexport)
     list(APPEND LINK_LIB plugins)
+    list(APPEND LINK_LIB multiinstances)
 endif()
+
+list(APPEND LINK_LIB diagnostics)
 
 if (BUILD_AUTOBOT_MODULE)
     list(APPEND LINK_LIB autobot)
@@ -245,8 +251,6 @@ else (MSCORE_OUTPUT_NAME)
     set(MSCORE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
 endif (MSCORE_OUTPUT_NAME)
 set(MSCORE_EXECUTABLE_NAME "${MSCORE_EXECUTABLE_NAME}" PARENT_SCOPE)
-
-add_dependencies(mscore workspaces)
 
 ###########################################
 # Link
@@ -345,26 +349,6 @@ if (OS_IS_WIN)
             REGEX ".*QtTest.*" EXCLUDE
             REGEX ".*QtWebkit.*" EXCLUDE
             )
-
-    if (USE_WEBENGINE)
-        install(FILES
-                ${QT_INSTALL_BINS}/Qt5WebEngineWidgets.dll
-                ${QT_INSTALL_BINS}/Qt5WebEngineCore.dll
-                DESTINATION bin)
-
-        install(FILES
-               ${QT_INSTALL_LIBEXECS}/QtWebEngineProcess.exe
-               DESTINATION bin)
-
-        install(DIRECTORY
-               ${QT_INSTALL_DATA}/resources
-               DESTINATION bin/webengineresources)
-
-        install(DIRECTORY
-               ${QT_INSTALL_TRANSLATIONS}/qtwebengine_locales
-               DESTINATION bin/webengineresources/translations)
-
-    endif(USE_WEBENGINE)
 
     if (SNDFILE_LIB)
         install(FILES ${DEPENDENCIES_DIR}/libsndfile-1.dll DESTINATION bin)
@@ -508,7 +492,7 @@ elseif(OS_IS_WASM)
     copy_html_js_launch_files(mscore)
 
 else()
-    message(FATAL_ERROR "Unsopported Platform: ${CMAKE_HOST_SYSTEM_NAME}")
+    message(FATAL_ERROR "Unsupported Platform: ${CMAKE_HOST_SYSTEM_NAME}")
 endif()
 
 

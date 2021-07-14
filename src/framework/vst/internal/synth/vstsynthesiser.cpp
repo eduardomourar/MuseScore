@@ -114,30 +114,30 @@ void VstSynthesiser::flushSound()
     NOT_IMPLEMENTED;
 }
 
-Ret VstSynthesiser::setupChannels(const std::vector<midi::Event>& /*events*/)
+Ret VstSynthesiser::setupMidiChannels(const std::vector<midi::Event>& /*events*/)
 {
     NOT_IMPLEMENTED;
     return Ret(Ret::Code::Ok);
 }
 
-void VstSynthesiser::channelSoundsOff(midi::channel_t /*chan*/)
+void VstSynthesiser::midiChannelSoundsOff(midi::channel_t /*chan*/)
 {
     NOT_IMPLEMENTED;
 }
 
-bool VstSynthesiser::channelVolume(midi::channel_t /*chan*/, float /*val*/)
-{
-    NOT_IMPLEMENTED;
-    return true;
-}
-
-bool VstSynthesiser::channelBalance(midi::channel_t /*chan*/, float /*val*/)
+bool VstSynthesiser::midiChannelVolume(midi::channel_t /*chan*/, float /*val*/)
 {
     NOT_IMPLEMENTED;
     return true;
 }
 
-bool VstSynthesiser::channelPitch(midi::channel_t /*chan*/, int16_t /*val*/)
+bool VstSynthesiser::midiChannelBalance(midi::channel_t /*chan*/, float /*val*/)
+{
+    NOT_IMPLEMENTED;
+    return true;
+}
+
+bool VstSynthesiser::midiChannelPitch(midi::channel_t /*chan*/, int16_t /*val*/)
 {
     NOT_IMPLEMENTED;
     return true;
@@ -148,37 +148,23 @@ void VstSynthesiser::setSampleRate(unsigned int sampleRate)
     m_vstAudioClient->setSampleRate(sampleRate);
 }
 
-unsigned int VstSynthesiser::streamCount() const
+unsigned int VstSynthesiser::audioChannelsCount() const
 {
-    return audio::synth::AUDIO_CHANNELS;
+    return config()->audioChannelsCount();
 }
 
-async::Channel<unsigned int> VstSynthesiser::streamsCountChanged() const
+async::Channel<unsigned int> VstSynthesiser::audioChannelsCountChanged() const
 {
     return m_streamsCountChanged;
 }
 
-void VstSynthesiser::forward(unsigned int sampleCount)
+void VstSynthesiser::process(float* buffer, unsigned int sampleCount)
 {
-    writeBuf(m_buffer.data(), sampleCount);
-}
-
-const float* VstSynthesiser::data() const
-{
-    return m_buffer.data();
-}
-
-void VstSynthesiser::setBufferSize(unsigned int samples)
-{
-    LOGI() << "SET BUFFER SIZE = " << samples;
-
-    unsigned int newSize = samples * streamCount();
-
-    if (newSize == 0 || m_buffer.size() == newSize) {
+    if (!buffer) {
         return;
     }
 
-    m_buffer.resize(newSize);
+    m_vstAudioClient->setBlockSize(sampleCount);
 
-    m_vstAudioClient->setBlockSize(samples);
+    writeBuf(buffer, sampleCount);
 }

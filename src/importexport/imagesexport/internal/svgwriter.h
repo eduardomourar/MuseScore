@@ -23,13 +23,19 @@
 #ifndef MU_IMPORTEXPORT_SVGWRITER_H
 #define MU_IMPORTEXPORT_SVGWRITER_H
 
-#include "notation/abstractnotationwriter.h"
+#include "abstractimagewriter.h"
+
+#include "modularity/ioc.h"
+#include "iimagesexportconfiguration.h"
 
 namespace mu::iex::imagesexport {
-class SvgWriter : public notation::AbstractNotationWriter
+class SvgWriter : public AbstractImageWriter
 {
+    INJECT(iex, IImagesExportConfiguration, configuration)
+
 public:
-    Ret write(const notation::INotationPtr notation, system::IODevice& destinationDevice, const Options& options = Options()) override;
+    std::vector<project::INotationWriter::UnitType> supportedUnitTypes() const override;
+    Ret write(notation::INotationPtr notation, io::Device& destinationDevice, const Options& options = Options()) override;
 
 private:
     using NotesColors = QHash<int /* noteIndex */, QColor>;

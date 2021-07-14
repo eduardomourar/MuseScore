@@ -36,6 +36,8 @@ using namespace mu::framework;
 using namespace mu::audio;
 using namespace mu::audio::synth;
 
+static const audioch_t AUDIO_CHANNELS = 2;
+
 //TODO: add other setting: audio device etc
 static const Settings::Key AUDIO_API_KEY("audio", "io/audioApi");
 static const Settings::Key AUDIO_BUFFER_SIZE("audio", "driver_buffer");
@@ -46,7 +48,6 @@ static const Settings::Key SHOW_CONTROLS_IN_MIXER("midi", "io/midi/showControlsI
 
 //! FIXME Temporary for tests
 static const std::string DEFAULT_FLUID_SOUNDFONT = "MuseScore_General.sf3";     // "GeneralUser GS v1.471.sf2"; // "MuseScore_General.sf3";
-static const std::string DEFAULT_ZERBERUS_SOUNDFONT = "FM-Piano1-20190916.sfz"; // "";
 
 void AudioConfiguration::init()
 {
@@ -81,7 +82,12 @@ std::string AudioConfiguration::currentAudioApi() const
 
 void AudioConfiguration::setCurrentAudioApi(const std::string& name)
 {
-    settings()->setValue(AUDIO_API_KEY, Val(name));
+    settings()->setSharedValue(AUDIO_API_KEY, Val(name));
+}
+
+audioch_t AudioConfiguration::audioChannelsCount() const
+{
+    return AUDIO_CHANNELS;
 }
 
 unsigned int AudioConfiguration::driverBufferSize() const
@@ -93,7 +99,7 @@ std::vector<io::path> AudioConfiguration::soundFontPaths() const
 {
     std::string pathsStr = settings()->value(USER_SOUNDFONTS_PATH).toString();
     std::vector<io::path> paths = io::path::pathsFromString(pathsStr, ";");
-    paths.push_back(globalConfiguration()->sharePath());
+    paths.push_back(globalConfiguration()->appDataPath());
 
     //! TODO Implement me
     // append extensions directory
@@ -109,7 +115,7 @@ bool AudioConfiguration::isShowControlsInMixer() const
 
 void AudioConfiguration::setIsShowControlsInMixer(bool show)
 {
-    settings()->setValue(SHOW_CONTROLS_IN_MIXER, Val(show));
+    settings()->setSharedValue(SHOW_CONTROLS_IN_MIXER, Val(show));
 }
 
 const SynthesizerState& AudioConfiguration::defaultSynthesizerState() const
@@ -120,11 +126,6 @@ const SynthesizerState& AudioConfiguration::defaultSynthesizerState() const
         gf.name = "Fluid";
         gf.vals.push_back(SynthesizerState::Val(SynthesizerState::ValID::SoundFontID, DEFAULT_FLUID_SOUNDFONT));
         state.groups.insert({ gf.name, std::move(gf) });
-
-        SynthesizerState::Group gz;
-        gz.name = "Zerberus";
-        gz.vals.push_back(SynthesizerState::Val(SynthesizerState::ValID::SoundFontID, DEFAULT_ZERBERUS_SOUNDFONT));
-        state.groups.insert({ gz.name, std::move(gz) });
     }
 
     return state;
@@ -186,7 +187,7 @@ async::Notification AudioConfiguration::synthesizerStateGroupChanged(const std::
 
 io::path AudioConfiguration::stateFilePath() const
 {
-    return globalConfiguration()->dataPath() + "/synthesizer.xml";
+    return globalConfiguration()->userAppDataPath() + "/synthesizer.xml";
 }
 
 bool AudioConfiguration::readState(const io::path& path, SynthesizerState& state) const

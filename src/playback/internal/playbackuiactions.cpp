@@ -25,29 +25,36 @@
 
 using namespace mu::playback;
 using namespace mu::ui;
+using namespace mu::actions;
 
 const UiActionList PlaybackUiActions::m_mainActions = {
     UiAction("play",
-             mu::context::UiCtxAny,
+             mu::context::UiCtxNotationFocused,
              QT_TRANSLATE_NOOP("action", "Play"),
              QT_TRANSLATE_NOOP("action", "Start or stop playback"),
              IconCode::Code::PLAY
              ),
+    UiAction("stop",
+             mu::context::UiCtxNotationFocused,
+             QT_TRANSLATE_NOOP("action", "Stop"),
+             QT_TRANSLATE_NOOP("action", "Stop playback"),
+             IconCode::Code::STOP
+             ),
     UiAction("rewind",
-             mu::context::UiCtxAny,
+             mu::context::UiCtxNotationFocused,
              QT_TRANSLATE_NOOP("action", "Rewind"),
              QT_TRANSLATE_NOOP("action", "Rewind to start position"),
              IconCode::Code::REWIND
              ),
     UiAction("loop",
-             mu::context::UiCtxAny,
+             mu::context::UiCtxNotationFocused,
              QT_TRANSLATE_NOOP("action", "Loop Playback"),
              QT_TRANSLATE_NOOP("action", "Toggle 'Loop Playback'"),
              IconCode::Code::LOOP,
              Checkable::Yes
              ),
     UiAction("metronome",
-             mu::context::UiCtxAny,
+             mu::context::UiCtxNotationFocused,
              QT_TRANSLATE_NOOP("action", "Metronome"),
              QT_TRANSLATE_NOOP("action", "Play metronome during playback"),
              IconCode::Code::METRONOME,
@@ -101,16 +108,6 @@ const UiActionList PlaybackUiActions::m_loopBoundaryActions = {
              ),
 };
 
-const UiActionList& PlaybackUiActions::settingsActions()
-{
-    return m_settingsActions;
-}
-
-const UiActionList& PlaybackUiActions::loopBoundaryActions()
-{
-    return m_loopBoundaryActions;
-}
-
 PlaybackUiActions::PlaybackUiActions(std::shared_ptr<PlaybackController> controller)
     : m_controller(controller)
 {
@@ -160,4 +157,30 @@ mu::async::Channel<mu::actions::ActionCodeList> PlaybackUiActions::actionEnabled
 mu::async::Channel<mu::actions::ActionCodeList> PlaybackUiActions::actionCheckedChanged() const
 {
     return m_actionCheckedChanged;
+}
+
+const UiActionList& PlaybackUiActions::settingsActions()
+{
+    return m_settingsActions;
+}
+
+const UiActionList& PlaybackUiActions::loopBoundaryActions()
+{
+    return m_loopBoundaryActions;
+}
+
+const mu::ui::ToolConfig& PlaybackUiActions::defaultPlaybackToolConfig()
+{
+    static ToolConfig config;
+    if (!config.isValid()) {
+        config.items = {
+            { "rewind", true },
+            { "play", true },
+            { "loop", true },
+            { "loop-in", true },
+            { "loop-out", true },
+            { "metronome", true },
+        };
+    }
+    return config;
 }

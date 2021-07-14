@@ -33,12 +33,15 @@ import "internal"
 Rectangle {
     id: root
 
-    property alias navigation: keynavSub
+    property alias navigation: navPanel
     property bool floating: false
 
+    color: ui.theme.backgroundPrimaryColor
+
     NavigationPanel {
-        id: keynavSub
+        id: navPanel
         name: "PlaybackToolBar"
+        enabled: root.enabled && root.visible
     }
 
     PlaybackToolBarModel {
@@ -67,9 +70,7 @@ Rectangle {
                 Layout.preferredWidth: childrenRect.width
                 Layout.preferredHeight: childrenRect.height
 
-                contentHeight: 32
-                contentWidth: contentHeight
-
+                contentHeight: root.floating ? 32 : 48
                 spacing: 4
 
                 model: playbackModel
@@ -79,6 +80,7 @@ Rectangle {
 
                 delegate: Loader {
                     id: itemLoader
+                    anchors.verticalCenter: parent ? parent.verticalCenter : undefined
 
                     sourceComponent: Boolean(model.code) || model.subitems.length !== 0 ? menuItemComp : separatorComp
 
@@ -91,24 +93,29 @@ Rectangle {
 
                         FlatButton {
                             id: btn
+
                             property var modelData
-                            property var hasSubitems: modelData.subitems.length !== 0
+                            property bool hasSubitems: modelData.subitems.length !== 0
 
                             icon: modelData.icon
-                            hint: modelData.hint
+
+                            toolTipTitle: modelData.title
+                            toolTipDescription: modelData.description
+                            toolTipShortcut: modelData.shortcut
+
                             iconFont: ui.theme.toolbarIconsFont
 
-                            normalStateColor: modelData.checked || menuLoader.isMenuOpened()
+                            normalStateColor: modelData.checked || menuLoader.isMenuOpened
                                               ? ui.theme.accentColor : "transparent"
-                            accentButton: modelData.checked || menuLoader.isMenuOpened()
+                            accentButton: modelData.checked || menuLoader.isMenuOpened
 
-                            navigation.panel: keynavSub
-                            navigation.name: modelData.hint
+                            navigation.panel: navPanel
+                            navigation.name: modelData.title
                             navigation.order: modelData.index
                             navigation.enabled: playbackModel.isPlayAllowed
 
                             onClicked: {
-                                if (menuLoader.isMenuOpened() || hasSubitems) {
+                                if (menuLoader.isMenuOpened || hasSubitems) {
                                     menuLoader.toggleOpened(modelData.subitems, btn.navigation)
                                     return
                                 }
@@ -183,12 +190,6 @@ Rectangle {
 
                 noteSymbolFont.pixelSize: ui.theme.iconsFont.pixelSize
                 tempoValueFont: timeField.font
-            }
-
-            SeparatorLine {
-                Layout.leftMargin: 24
-                orientation: Qt.Vertical
-                visible: !root.floating
             }
         }
 

@@ -21,6 +21,8 @@
  */
 #include "glissandoplaybackmodel.h"
 
+#include "translation.h"
+
 using namespace mu::inspector;
 
 GlissandoPlaybackModel::GlissandoPlaybackModel(QObject* parent, IElementRepositoryService* repository)

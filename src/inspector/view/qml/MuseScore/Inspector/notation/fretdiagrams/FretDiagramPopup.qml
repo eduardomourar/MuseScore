@@ -26,13 +26,12 @@ import MuseScore.UiComponents 1.0
 import "../../common/"
 import "internal"
 
-StyledPopup {
+StyledPopupView {
     id: root
 
     property alias model: fretDiagramTabPanel.model
 
-    implicitHeight: contentColumn.implicitHeight + topPadding + bottomPadding
-    width: parent.width
+    contentHeight: contentColumn.implicitHeight
 
     Column {
         id: contentColumn
@@ -73,6 +72,7 @@ StyledPopup {
                 isMultipleDotsModeOn: root.model ? root.model.isMultipleDotsModeOn : false
                 currentFretDotType: root.model ? root.model.currentFretDotType : false
                 visible: root.model ? root.model.areSettingsAvailable : false
+                color: ui.theme.fontPrimaryColor
 
                 width: parent.width
             }

@@ -28,10 +28,17 @@ set(MODULE_TEST_SRC
 )
 
 set(MODULE_TEST_LINK
-    libmscore
+    engraving
     fonts
     iex_musicxml
     )
+
+if (OS_IS_MAC)
+    set(MODULE_TEST_LINK
+        ${MODULE_TEST_LINK}
+        ${OsxFrameworks}
+        )
+endif()
 
 set(MODULE_TEST_DATA_ROOT ${CMAKE_CURRENT_LIST_DIR})
 

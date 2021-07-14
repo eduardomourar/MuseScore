@@ -40,7 +40,7 @@
 #include "libmscore/element.h"
 #include "libmscore/bracket.h"
 
-#include "libmscore/draw/qpainterprovider.h"
+#include "engraving/draw/qpainterprovider.h"
 
 #include "thirdparty/qzip/qzipreader_p.h"
 #include "thirdparty/qzip/qzipwriter_p.h"
@@ -50,7 +50,10 @@
 #include "translation.h"
 
 #include "../palette_config.h"
+#include "draw/pen.h"
 
+using namespace mu;
+using namespace mu::draw;
 using namespace mu::palette;
 using namespace mu::framework;
 using namespace mu::actions;
@@ -347,7 +350,7 @@ PaletteCellPtr PaletteCell::readMimeData(const QByteArray& data)
 
 PaletteCellPtr PaletteCell::readElementMimeData(const QByteArray& data)
 {
-    QPointF dragOffset;
+    PointF dragOffset;
     Fraction duration(1, 4);
     ElementPtr element(Element::readMimeData(gscore, data, &dragOffset, &duration));
 
@@ -531,7 +534,7 @@ void PalettePanel::showWritingPaletteError(const QString& path) const
 {
     std::string title = mu::trc("palette", "Writing Palette File");
     std::string message = mu::qtrc("palette", "Writing Palette File\n%1\nfailed: ").arg(path).toStdString();
-    interactive()->message(IInteractive::Type::Critical, title, message);
+    interactive()->error(title, message);
 }
 
 //---------------------------------------------------------
@@ -811,7 +814,7 @@ static bool isSame(const Element& e1, const Element& e2)
 {
     return e1.type() == e2.type()
            && e1.subtype() == e2.subtype()
-           && e1.mimeData(QPointF()) == e2.mimeData(QPointF());
+           && e1.mimeData(PointF()) == e2.mimeData(PointF());
 }
 
 //---------------------------------------------------------
@@ -1067,7 +1070,7 @@ void PaletteTree::retranslate()
 /// aspect ratio, and leaving a small margin around the edges.
 //---------------------------------------------------------
 
-static void paintIconElement(mu::draw::Painter& painter, const QRect& rect, Element* e)
+static void paintIconElement(mu::draw::Painter& painter, const RectF& rect, Element* e)
 {
     Q_ASSERT(e && e->isIcon());
     painter.save();   // so we can restore it after we are done using it
@@ -1079,7 +1082,7 @@ static void paintIconElement(mu::draw::Painter& painter, const QRect& rect, Elem
     icon->setExtent(extent);
 
     extent /= 2.0;
-    QPointF iconCenter(extent, extent);
+    PointF iconCenter(extent, extent);
 
     painter.translate(rect.center() - iconCenter);   // change coordinates
     icon->draw(&painter);
@@ -1104,7 +1107,7 @@ void PaletteCellIconEngine::paintScoreElement(mu::draw::Painter& painter, Elemen
     painter.scale(sizeRatio, sizeRatio);   // scale coordinates so element is drawn at correct size
 
     element->layout(); // calculate bbox
-    QPointF origin = element->bbox().center();
+    PointF origin = element->bbox().center();
 
     if (alignToStaff) {
         // y = 0 is position of the element's parent.
@@ -1125,10 +1128,10 @@ void PaletteCellIconEngine::paintScoreElement(mu::draw::Painter& painter, Elemen
 /// distance from the top of the QRect to the uppermost staff line.
 //---------------------------------------------------------
 
-qreal PaletteCellIconEngine::paintStaff(mu::draw::Painter& painter, const QRect& rect, qreal spatium)
+qreal PaletteCellIconEngine::paintStaff(Painter& painter, const RectF& rect, qreal spatium)
 {
     painter.save(); // so we can restore painter after we are done using it
-    QPen pen(configuration()->elementsColor());
+    Pen pen(configuration()->elementsColor());
     pen.setWidthF(MScore::defaultStyle().value(Sid::staffLineWidth).toDouble() * spatium);
     painter.setPen(pen);
 
@@ -1144,7 +1147,7 @@ qreal PaletteCellIconEngine::paintStaff(mu::draw::Painter& painter, const QRect&
     // draw staff lines with middle line centered vertically on target
     qreal y = topLineDist;
     for (int i = 0; i < numStaffLines; ++i) {
-        painter.drawLine(QLineF(x1, y, x2, y));
+        painter.drawLine(LineF(x1, y, x2, y));
         y += spatium;
     }
 
@@ -1156,7 +1159,7 @@ qreal PaletteCellIconEngine::paintStaff(mu::draw::Painter& painter, const QRect&
 //   paintBackground
 //---------------------------------------------------------
 
-void PaletteCellIconEngine::paintBackground(mu::draw::Painter& painter, const QRect& rect, bool selected, bool current)
+void PaletteCellIconEngine::paintBackground(Painter& painter, const RectF& rect, bool selected, bool current)
 {
     QColor c(configuration()->accentColor());
     if (current || selected) {
@@ -1169,7 +1172,7 @@ void PaletteCellIconEngine::paintBackground(mu::draw::Painter& painter, const QR
 //   paintTag
 //---------------------------------------------------------
 
-void PaletteCellIconEngine::paintTag(mu::draw::Painter& painter, const QRect& rect, QString tag)
+void PaletteCellIconEngine::paintTag(Painter& painter, const RectF& rect, QString tag)
 {
     if (tag.isEmpty()) {
         return;
@@ -1177,8 +1180,8 @@ void PaletteCellIconEngine::paintTag(mu::draw::Painter& painter, const QRect& re
 
     painter.save();   // so we can restore it after we are done using it
     painter.setPen(configuration()->elementsColor());
-    QFont f(painter.font());
-    f.setPointSize(12);
+    Font f(painter.font());
+    f.setPointSizeF(12.0);
     painter.setFont(f);
 
     if (tag == "ShowMore") {
@@ -1194,7 +1197,7 @@ void PaletteCellIconEngine::paintTag(mu::draw::Painter& painter, const QRect& re
 //   PaletteCellIconEngine::paintCell
 //---------------------------------------------------------
 
-void PaletteCellIconEngine::paintCell(mu::draw::Painter& painter, const QRect& rect, bool selected, bool current) const
+void PaletteCellIconEngine::paintCell(mu::draw::Painter& painter, const RectF& rect, bool selected, bool current) const
 {
     const qreal _yOffset = 0.0;   // TODO
 
@@ -1219,7 +1222,7 @@ void PaletteCellIconEngine::paintCell(mu::draw::Painter& painter, const QRect& r
     const bool drawStaff = _cell->drawStaff;
     const qreal spatium = PALETTE_SPATIUM * _extraMag * _cell->mag;
 
-    QPointF origin = rect.center();   // draw element at center of cell by default
+    PointF origin = rect.center();   // draw element at center of cell by default
     painter.translate(0, _yOffset * spatium);   // offset both element and staff
 
     if (drawStaff) {
@@ -1229,7 +1232,7 @@ void PaletteCellIconEngine::paintCell(mu::draw::Painter& painter, const QRect& r
 
     painter.translate(origin);
     painter.translate(_cell->xoffset * spatium, _cell->yoffset * spatium);   // additional offset for element only
-    painter.setPen(QPen(configuration()->elementsColor()));
+    painter.setPen(Pen(configuration()->elementsColor()));
 
     paintScoreElement(painter, el, spatium, drawStaff);
 }
@@ -1243,7 +1246,7 @@ void PaletteCellIconEngine::paint(QPainter* qp, const QRect& rect, QIcon::Mode m
     mu::draw::Painter p(qp, "palettecell");
     p.save();   // so we can restore it later
     p.setAntialiasing(true);
-    paintCell(p, rect, mode == QIcon::Selected, state == QIcon::On);
+    paintCell(p, RectF::fromQRectF(rect), mode == QIcon::Selected, state == QIcon::On);
     p.restore();   // return painter to saved initial state (undo any changes to pen, coordinates, font, etc.)
 }
 } // namespace Ms

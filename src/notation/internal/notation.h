@@ -22,12 +22,13 @@
 #ifndef MU_NOTATION_NOTATION_H
 #define MU_NOTATION_NOTATION_H
 
-#include "inotation.h"
+#include "../inotation.h"
 #include "igetscore.h"
+#include "inotationmidievents.h"
 #include "async/asyncable.h"
 
 #include "modularity/ioc.h"
-#include "inotationconfiguration.h"
+#include "../inotationconfiguration.h"
 
 namespace Ms {
 class MScore;
@@ -50,12 +51,14 @@ public:
     Meta metaInfo() const override;
     void setMetaInfo(const Meta& meta) override;
 
+    ScoreOrder scoreOrder() const override;
+
     INotationPtr clone() const override;
 
     void setViewSize(const QSizeF& vs) override;
     void setViewMode(const ViewMode& viewMode) override;
     ViewMode viewMode() const override;
-    void paint(draw::Painter* painter, const QRectF& frameRect) override;
+    void paint(draw::Painter* painter, const RectF& frameRect) override;
 
     ValCh<bool> opened() const override;
     void setOpened(bool opened) override;
@@ -77,12 +80,14 @@ protected:
     Ms::MScore* scoreGlobal() const;
     void notifyAboutNotationChanged();
 
+    INotationPartsPtr m_parts = nullptr;
+
 private:
     friend class NotationInteraction;
 
-    void paintPages(mu::draw::Painter* painter, const QRectF& frameRect, const QList<Ms::Page*>& pages, bool paintBorders) const;
+    void paintPages(mu::draw::Painter* painter, const RectF& frameRect, const QList<Ms::Page*>& pages, bool paintBorders) const;
     void paintPageBorder(mu::draw::Painter* painter, const Ms::Page* page) const;
-    void paintForeground(mu::draw::Painter* painter, const QRectF& pageRect) const;
+    void paintForeground(mu::draw::Painter* painter, const RectF& pageRect) const;
 
     QSizeF viewSize() const;
 
@@ -91,14 +96,14 @@ private:
     Ms::Score* m_score = nullptr;
     ValCh<bool> m_opened;
 
-    INotationInteractionPtr m_interaction;
-    INotationPlaybackPtr m_playback;
-    INotationUndoStackPtr m_undoStack;
-    INotationStylePtr m_style;
-    INotationMidiInputPtr m_midiInput;
-    INotationAccessibilityPtr m_accessibility;
-    INotationElementsPtr m_elements;
-    INotationPartsPtr m_parts;
+    INotationInteractionPtr m_interaction = nullptr;
+    INotationMidiEventsPtr m_midiEventsProvider = nullptr;
+    INotationPlaybackPtr m_playback = nullptr;
+    INotationUndoStackPtr m_undoStack = nullptr;
+    INotationStylePtr m_style = nullptr;
+    INotationMidiInputPtr m_midiInput = nullptr;
+    INotationAccessibilityPtr m_accessibility = nullptr;
+    INotationElementsPtr m_elements = nullptr;
 
     async::Notification m_notationChanged;
 };

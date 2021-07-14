@@ -23,13 +23,13 @@
 #ifndef MU_IMPORTEXPORT_FLACWRITER_H
 #define MU_IMPORTEXPORT_FLACWRITER_H
 
-#include "notation/abstractnotationwriter.h"
+#include "abstractaudiowriter.h"
 
 namespace mu::iex::audioexport {
-class FlacWriter : public notation::AbstractNotationWriter
+class FlacWriter : public AbstractAudioWriter
 {
 public:
-    Ret write(const notation::INotationPtr notation, system::IODevice& destinationDevice, const Options& options = Options()) override;
+    Ret write(notation::INotationPtr notation, io::Device& destinationDevice, const Options& options = Options()) override;
 };
 }
 

@@ -40,130 +40,6 @@ InspectorSectionView {
 
         spacing: 24
 
-        GridLayout {
-            id: grid
-
-            width: parent.width
-
-            columns: 2
-
-            rowSpacing: 16
-            columnSpacing: 4
-
-            Column {
-                spacing: 8
-
-                Layout.fillWidth: true
-                Layout.maximumWidth: parent.width/2
-
-                StyledTextLabel {
-                    text: qsTrc("inspector", "Page size")
-                }
-
-                StyledComboBox {
-                    width: parent.width
-
-                    textRoleName: "nameRole"
-                    valueRoleName: "idRole"
-
-                    model: root.model ? root.model.pageTypeListModel : null
-
-                    currentIndex: root.model && root.model.pageTypeListModel ? indexOfValue(root.model.pageTypeListModel.currentPageSizeId) : -1
-
-                    onValueChanged: {
-                        root.model.pageTypeListModel.currentPageSizeId = value
-                    }
-                }
-            }
-
-            Column {
-                spacing: 8
-
-                Layout.fillWidth: true
-                Layout.maximumWidth: parent.width/2
-
-                StyledTextLabel {
-                    text: qsTrc("inspector", "Orientation")
-                }
-
-                RadioButtonGroup {
-                    id: orientationType
-
-                    height: 30
-                    width: parent.width
-
-                    model: [
-                        { iconRole: IconCode.ORIENTATION_PORTRAIT, typeRole: ScoreAppearanceTypes.ORIENTATION_PORTRAIT },
-                        { iconRole: IconCode.ORIENTATION_LANDSCAPE, typeRole: ScoreAppearanceTypes.ORIENTATION_LANDSCAPE }
-                    ]
-
-                    delegate: FlatRadioButton {
-
-                        ButtonGroup.group: orientationType.radioButtonGroup
-
-                        checked: root.model ? root.model.orientationType === modelData["typeRole"]
-                                            : false
-
-                        onToggled: {
-                            root.model.orientationType = modelData["typeRole"]
-                        }
-
-                        StyledIconLabel {
-                            iconCode: modelData["iconRole"]
-                        }
-                    }
-                }
-            }
-
-            Column {
-                spacing: 8
-
-                Layout.fillWidth: true
-                Layout.maximumWidth: parent.width/2
-
-                StyledTextLabel {
-                    text: qsTrc("inspector", "Staff spacing")
-                }
-
-                IncrementalPropertyControl {
-                    iconMode: iconModeEnum.hidden
-
-                    currentValue: root.model ? root.model.staffSpacing : 0
-                    measureUnitsSymbol: qsTrc("inspector", "mm")
-
-                    step: 0.1
-                    decimals: 3
-                    minValue: 0.1
-                    maxValue: 100
-
-                    onValueEdited: { root.model.staffSpacing = newValue }
-                }
-            }
-
-            Column {
-                Layout.fillWidth: true
-                Layout.maximumWidth: parent.width/2
-
-                spacing: 8
-
-                StyledTextLabel {
-                    text: qsTrc("inspector", "Staff distance")
-                }
-
-                IncrementalPropertyControl {
-                    iconMode: iconModeEnum.hidden
-
-                    currentValue: root.model ? root.model.staffDistance : 0
-
-                    step: 0.1
-                    minValue: 0.1
-                    maxValue: 10
-
-                    onValueEdited: { root.model.staffDistance = newValue }
-                }
-            }
-        }
-
         Column {
             width: parent.width
 
@@ -172,7 +48,11 @@ InspectorSectionView {
             FlatButton {
                 width: parent.width
 
-                text: qsTrc("inspector", "More page settings")
+                navigation.panel: root.navigationPanel
+                navigation.name: "Page settings"
+                navigation.row: root.navigationRow(6)
+
+                text: qsTrc("inspector", "Page settings")
 
                 onClicked: {
                     if (root.model) {
@@ -183,6 +63,10 @@ InspectorSectionView {
 
             FlatButton {
                 width: parent.width
+
+                navigation.panel: root.navigationPanel
+                navigation.name: "Style settings"
+                navigation.row: root.navigationRow(7)
 
                 text: qsTrc("inspector", "Style settings")
 

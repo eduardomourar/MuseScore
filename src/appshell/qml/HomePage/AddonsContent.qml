@@ -19,10 +19,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.9
+import QtQuick 2.15
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
+import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
 import MuseScore.Extensions 1.0
 import MuseScore.Languages 1.0
@@ -32,74 +33,106 @@ FocusScope {
     id: root
 
     property var color: ui.theme.backgroundSecondaryColor
-    property string item: ""
+    property string section: ""
 
-    onItemChanged: {
-        if (!Boolean(root.item)) {
+    signal requestActiveFocus()
+
+    QtObject {
+        id: prv
+
+        readonly property int sideMargin: 46
+    }
+
+    NavigationSection {
+        id: navSec
+        name: "Addons"
+        enabled: root.visible
+        order: 3
+        onActiveChanged: {
+            if (active) {
+                root.requestActiveFocus()
+            }
+        }
+    }
+
+    onSectionChanged: {
+        if (!Boolean(root.section)) {
             return
         }
 
-        bar.selectPage(root.item)
+        bar.selectPage(root.section)
     }
 
     Rectangle {
         anchors.fill: parent
         color: root.color
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                forceActiveFocus()
-            }
-        }
     }
 
     RowLayout {
         id: topLayout
+
         anchors.top: parent.top
-        anchors.topMargin: 66
+        anchors.topMargin: prv.sideMargin
         anchors.left: parent.left
+        anchors.leftMargin: prv.sideMargin
         anchors.right: parent.right
+        anchors.rightMargin: prv.sideMargin
 
         spacing: 12
+
+        NavigationPanel {
+            id: navSearchPanel
+            name: "AddonsSearch"
+            section: navSec
+            order: 1
+            accessible.name: qsTrc("appshell", "Addons")
+        }
 
         StyledTextLabel {
             id: addonsLabel
 
-            Layout.leftMargin: 133
-            Layout.alignment: Qt.AlignLeft
-
-            font: ui.theme.titleBoldFont
-
             text: qsTrc("appshell", "Add-ons")
+            font: ui.theme.titleBoldFont
+            horizontalAlignment: Text.AlignLeft
+        }
+
+        Item {
+            Layout.preferredWidth: topLayout.width - addonsLabel.width - serchAndCategoryLayout.width - topLayout.spacing * 2
+            Layout.fillHeight: true
         }
 
         Row {
-            Layout.alignment: Qt.AlignHCenter
+            id: serchAndCategoryLayout
 
             spacing: 12
 
             SearchField {
                 id: searchField
 
+                navigation.name: "AddonsSearch"
+                navigation.panel: navSearchPanel
+                navigation.order: 1
+                accessible.name: qsTrc("appshell", "Addons search")
+
                 onSearchTextChanged: {
                     categoryComboBox.selectedCategory = ""
                 }
             }
 
-            StyledComboBox {
+            Dropdown {
                 id: categoryComboBox
 
                 width: searchField.width
 
-                textRoleName: "text"
-                valueRoleName: "value"
+                navigation.name: "CategoryComboBox"
+                navigation.panel: navSearchPanel
+                navigation.order: 2
 
                 visible: bar.canFilterByCategories
 
                 property string selectedCategory: Boolean(value) ? value : ""
 
-                displayText: qsTrc("appshell", "Category: ") + currentText
+                displayText: qsTrc("appshell", "Category: ") + categoryComboBox.currentText
 
                 function initModel() {
                     var categories = bar.categories()
@@ -120,24 +153,21 @@ FocusScope {
                 }
             }
         }
-
-        Item {
-            Layout.preferredWidth: addonsLabel.width
-            Layout.rightMargin: 133
-        }
     }
 
     TabBar {
         id: bar
 
         anchors.top: topLayout.bottom
-        anchors.topMargin: 54
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: 36
+        anchors.left: parent.left
+        anchors.leftMargin: prv.sideMargin - itemSideMargin
 
-        contentHeight: 28
+        contentHeight: 32
         spacing: 0
 
         property bool canFilterByCategories: bar.currentIndex === 0 || bar.currentIndex === 1
+        readonly property int itemSideMargin: 22
 
         function categories() {
             var result = []
@@ -163,23 +193,54 @@ FocusScope {
             currentIndex = pageIndex(pageName)
         }
 
+        NavigationPanel {
+            id: navTabPanel
+            name: "AddonsTabs"
+            section: navSec
+            order: 2
+            accessible.name: qsTrc("appshell", "Addons tabs")
+
+            onNavigationEvent: {
+                if (event.type === NavigationEvent.AboutActive) {
+                    event.setData("controlName", bar.currentItem.navigation.name)
+                }
+            }
+        }
+
         StyledTabButton {
             text: qsTrc("appshell", "Plugins")
-            sideMargin: 22
+            sideMargin: bar.itemSideMargin
             isCurrent: bar.currentIndex === 0
             backgroundColor: root.color
+
+            navigation.name: "Plugins"
+            navigation.panel: navTabPanel
+            navigation.order: 1
+            onNavigationTriggered: bar.currentIndex = 0
         }
+
         StyledTabButton {
             text: qsTrc("appshell", "Extensions")
-            sideMargin: 22
+            sideMargin: bar.itemSideMargin
             isCurrent: bar.currentIndex === 1
             backgroundColor: root.color
+
+            navigation.name: "Extensions"
+            navigation.panel: navTabPanel
+            navigation.order: 2
+            onNavigationTriggered: bar.currentIndex = 1
         }
+
         StyledTabButton {
             text: qsTrc("appshell", "Languages")
-            sideMargin: 22
+            sideMargin: bar.itemSideMargin
             isCurrent: bar.currentIndex === 2
             backgroundColor: root.color
+
+            navigation.name: "Languages"
+            navigation.panel: navTabPanel
+            navigation.order: 3
+            onNavigationTriggered: bar.currentIndex = 2
         }
     }
 
@@ -198,6 +259,8 @@ FocusScope {
             search: searchField.searchText
             selectedCategory: categoryComboBox.selectedCategory
             backgroundColor: root.color
+
+            sideMargin: prv.sideMargin
         }
 
         ExtensionsPage {
@@ -205,13 +268,19 @@ FocusScope {
 
             search: searchField.searchText
             backgroundColor: root.color
+
+            sideMargin: prv.sideMargin
         }
 
         LanguagesPage {
             id: languagesComp
 
+            navigation.section: navSec
+            navigation.order: 3
             search: searchField.searchText
             backgroundColor: root.color
+
+            sideMargin: prv.sideMargin
         }
     }
 }

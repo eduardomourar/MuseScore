@@ -39,12 +39,6 @@ struct mu::midi::CoreMidiOutPort::Core {
     int deviceID = -1;
 };
 
-CoreMidiOutPort::CoreMidiOutPort()
-{
-    m_core = std::unique_ptr<Core>(new Core());
-    initCore();
-}
-
 CoreMidiOutPort::~CoreMidiOutPort()
 {
     if (isConnected()) {
@@ -59,11 +53,61 @@ CoreMidiOutPort::~CoreMidiOutPort()
     }
 }
 
+void CoreMidiOutPort::init()
+{
+    m_core = std::unique_ptr<Core>(new Core());
+    initCore();
+}
+
 void CoreMidiOutPort::initCore()
 {
     OSStatus result;
+
+    static auto onCoreMidiNotificationReceived = [](const MIDINotification* notification, void* refCon) {
+        auto self = static_cast<CoreMidiOutPort*>(refCon);
+        IF_ASSERT_FAILED(self) {
+            return;
+        }
+
+        switch (notification->messageID) {
+        case kMIDIMsgObjectAdded:
+        case kMIDIMsgObjectRemoved:
+            if (notification->messageSize == sizeof(MIDIObjectAddRemoveNotification)) {
+                auto addRemoveNotification = (const MIDIObjectAddRemoveNotification*)notification;
+                MIDIObjectType objectType = addRemoveNotification->childType;
+
+                if (objectType == kMIDIObjectType_Destination) {
+                    if (notification->messageID == kMIDIMsgObjectRemoved) {
+                        MIDIObjectRef removedObject = addRemoveNotification->child;
+
+                        if (self->isConnected() && removedObject == self->m_core->destinationId) {
+                            self->disconnect();
+                        }
+                    }
+
+                    self->devicesChanged().notify();
+                }
+            } else {
+                LOGW() << "Received corrupted MIDIObjectAddRemoveNotification";
+            }
+            break;
+
+        // General message that should be ignored because we handle specific ones
+        case kMIDIMsgSetupChanged:
+
+        // Questionable whether we should send a notification for this ones
+        // Possibly we should send a notification when the changed property is the device name
+        case kMIDIMsgPropertyChanged:
+        case kMIDIMsgThruConnectionsChanged:
+        case kMIDIMsgSerialPortOwnerChanged:
+
+        case kMIDIMsgIOError:
+            break;
+        }
+    };
+
     QString name = "MuseScore";
-    result = MIDIClientCreate(name.toCFString(), nullptr, nullptr, &m_core->client);
+    result = MIDIClientCreate(name.toCFString(), onCoreMidiNotificationReceived, this, &m_core->client);
     IF_ASSERT_FAILED(result == noErr) {
         LOGE() << "failed create midi output client";
         return;
@@ -76,9 +120,9 @@ void CoreMidiOutPort::initCore()
     }
 }
 
-std::vector<MidiDevice> CoreMidiOutPort::devices() const
+MidiDeviceList CoreMidiOutPort::devices() const
 {
-    std::vector<MidiDevice> ret;
+    MidiDeviceList ret;
 
     CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
     int destinations = MIDIGetNumberOfDestinations();
@@ -106,7 +150,12 @@ std::vector<MidiDevice> CoreMidiOutPort::devices() const
     return ret;
 }
 
-mu::Ret CoreMidiOutPort::connect(const std::string& deviceID)
+mu::async::Notification CoreMidiOutPort::devicesChanged() const
+{
+    return m_devicesChanged;
+}
+
+mu::Ret CoreMidiOutPort::connect(const MidiDeviceID& deviceID)
 {
     if (isConnected()) {
         disconnect();

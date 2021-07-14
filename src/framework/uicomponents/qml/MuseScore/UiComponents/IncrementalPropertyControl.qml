@@ -40,12 +40,16 @@ Item {
     property alias validator: textInputField.validator
     property alias measureUnitsSymbol: textInputField.measureUnitsSymbol
 
+    property alias navigation: textInputField.navigation
+
     readonly property int spacing: 8
 
     signal valueEdited(var newValue)
 
     implicitHeight: 30
     implicitWidth: parent.width
+
+    navigation.name: root.objectName != "" ? root.objectName : "IncrementalControl"
 
     function increment() {
         var value = root.isIndeterminate ? 0.0 : currentValue
@@ -163,7 +167,7 @@ Item {
             AnchorChanges { target: textInputField; anchors.left: iconBackground.right }
 
             PropertyChanges { target: textInputField; anchors.leftMargin: spacing
-                                                          width: root.width - iconBackground.width - root.spacing }
+                width: root.width - iconBackground.width - root.spacing }
         },
 
         State {
@@ -177,7 +181,7 @@ Item {
             AnchorChanges { target: iconBackground; anchors.left: textInputField.right }
 
             PropertyChanges { target: iconBackground; anchors.leftMargin: spacing
-                                                      visible: true }
+                visible: true }
         },
 
         State {

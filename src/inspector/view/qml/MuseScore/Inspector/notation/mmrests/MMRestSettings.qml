@@ -38,10 +38,5 @@ PopupViewButton {
 
     MMRestPopup {
         id: mmrestPopup
-
-        x: popupPositionX
-        y: popupPositionY
-        arrowX: parent.x + parent.width / 2
-        width: popupAvailableWidth
     }
 }

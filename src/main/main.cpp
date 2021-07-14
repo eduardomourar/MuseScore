@@ -33,6 +33,7 @@
 #include "framework/uicomponents/uicomponentsmodule.h"
 #include "framework/fonts/fontsmodule.h"
 #include "framework/actions/actionsmodule.h"
+#include "framework/accessibility/accessibilitymodule.h"
 #ifdef BUILD_SHORTCUTS_MODULE
 #include "framework/shortcuts/shortcutsmodule.h"
 #else
@@ -64,14 +65,23 @@
 #else
 #include "stubs/userscores/userscoresstubmodule.h"
 #endif
+
+#ifdef BUILD_LEARN_MODULE
+#include "learn/learnmodule.h"
+#else
+#include "stubs/learn/learnmodule.h"
+#endif
+
+#include "engraving/engravingmodule.h"
 #include "notation/notationmodule.h"
+#include "project/projectmodule.h"
 
 #include "importexport/musicxml/musicxmlmodule.h"
 #include "importexport/bb/bbmodule.h"
 #include "importexport/bww/bwwmodule.h"
 #include "importexport/capella/capellamodule.h"
 #include "importexport/guitarpro/guitarpromodule.h"
-#include "importexport/midiimport/midiimportmodule.h"
+#include "importexport/midi/midimodule.h"
 #include "importexport/ove/ovemodule.h"
 #include "importexport/audioexport/audioexportmodule.h"
 #include "importexport/imagesexport/imagesexportmodule.h"
@@ -88,10 +98,10 @@
 #else
 #include "stubs/playback/playbackstubmodule.h"
 #endif
-#ifdef BUILD_INSTRUMENTS_MODULE
-#include "instruments/instrumentsmodule.h"
+#ifdef BUILD_INSTRUMENTSSCENE_MODULE
+#include "instrumentsscene/instrumentsscenemodule.h"
 #else
-#include "stubs/instruments/instrumentsstubmodule.h"
+#include "stubs/instrumentsscene/instrumentsscenestubmodule.h"
 #endif
 #include "converter/convertermodule.h"
 
@@ -131,6 +141,14 @@
 #else
 #include "stubs/languages/languagesstubmodule.h"
 #endif
+
+#ifdef BUILD_MULTIINSTANCES_MODULE
+#include "multiinstances/multiinstancesmodule.h"
+#else
+#include "stubs/multiinstances/multiinstancesstubmodule.h"
+#endif
+
+#include "diagnostics/diagnosticsmodule.h"
 
 #ifdef BUILD_AUTOBOT_MODULE
 #include "autobot/autobotmodule.h"
@@ -178,6 +196,7 @@ int main(int argc, char** argv)
 #endif
 
     app.addModule(new mu::actions::ActionsModule());
+    app.addModule(new mu::accessibility::AccessibilityModule());
     app.addModule(new mu::appshell::AppShellModule());
 
     app.addModule(new mu::context::ContextModule());
@@ -200,7 +219,11 @@ int main(int argc, char** argv)
     app.addModule(new mu::userscores::UserScoresStubModule());
 #endif
 
+    app.addModule(new mu::learn::LearnModule());
+
+    app.addModule(new mu::engraving::EngravingModule());
     app.addModule(new mu::notation::NotationModule());
+    app.addModule(new mu::project::ProjectModule());
     app.addModule(new mu::commonscene::CommonSceneModule());
 #ifdef BUILD_PLAYBACK_MODULE
     app.addModule(new mu::playback::PlaybackModule());
@@ -208,10 +231,10 @@ int main(int argc, char** argv)
     app.addModule(new mu::playback::PlaybackStubModule());
 #endif
 
-#ifdef BUILD_INSTRUMENTS_MODULE
-    app.addModule(new mu::instruments::InstrumentsModule());
+#ifdef BUILD_INSTRUMENTSSCENE_MODULE
+    app.addModule(new mu::instrumentsscene::InstrumentsSceneModule());
 #else
-    app.addModule(new mu::instruments::InstrumentsStubModule());
+    app.addModule(new mu::instrumentsscene::InstrumentsSceneStubModule());
 #endif
 
 #ifdef BUILD_VST
@@ -232,7 +255,7 @@ int main(int argc, char** argv)
     app.addModule(new mu::iex::musicxml::MusicXmlModule());
     app.addModule(new mu::iex::capella::CapellaModule());
     app.addModule(new mu::iex::guitarpro::GuitarProModule());
-    app.addModule(new mu::iex::midiimport::MidiImportModule());
+    app.addModule(new mu::iex::midi::MidiModule());
     app.addModule(new mu::iex::ove::OveModule());
     app.addModule(new mu::iex::audioexport::AudioExportModule());
     app.addModule(new mu::iex::imagesexport::ImagesExportModule());
@@ -262,6 +285,9 @@ int main(int argc, char** argv)
 #else
     app.addModule(new mu::languages::LanguagesStubModule());
 #endif
+
+    app.addModule(new mu::mi::MultiInstancesModule());
+    app.addModule(new mu::diagnostics::DiagnosticsModule());
 
 #ifdef BUILD_AUTOBOT_MODULE
     app.addModule(new mu::autobot::AutobotModule());
@@ -303,6 +329,6 @@ int main(int argc, char** argv)
 #endif
 
     int code = app.run(argcFinal, argvFinal);
-    LOGI() << "Good buy!! code: " << code;
+    LOGI() << "Goodbye!! code: " << code;
     return code;
 }

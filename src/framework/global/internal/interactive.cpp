@@ -38,72 +38,43 @@
 using namespace mu;
 using namespace mu::framework;
 
-IInteractive::Button Interactive::question(const std::string& title, const std::string& text,
-                                           const Buttons& buttons,
-                                           const Button& def) const
+static IInteractive::Result standardDialogResult(const RetVal<Val>& retVal)
 {
-    ButtonDatas datas;
-    datas.reserve(buttons.size());
-    for (Button b : buttons) {
-        datas.push_back(buttonData(b));
+    if (!retVal.ret) {
+        return IInteractive::Result();
     }
 
-    return static_cast<Button>(question(title, Text(text), datas, int(def)));
+    QVariantMap resultMap = retVal.val.toQVariant().toMap();
+
+    int btn = resultMap["buttonId"].toInt();
+    bool showAgain = resultMap["showAgain"].toBool();
+    return IInteractive::Result(btn, showAgain);
 }
 
-int Interactive::question(const std::string& title, const Text& text, const ButtonDatas& btns, int defBtn) const
+IInteractive::Result Interactive::question(const std::string& title, const std::string& text,
+                                           const Buttons& buttons,
+                                           const Button& def,
+                                           const Options& options) const
 {
-    //! NOTE Temporarily, need to replace the qml dialog
+    return question(title, Text(text), buttonDataList(buttons), int(def), options);
+}
 
-    auto format = [](IInteractive::TextFormat f) {
-        switch (f) {
-        case IInteractive::TextFormat::PlainText: return Qt::PlainText;
-        case IInteractive::TextFormat::RichText:  return Qt::RichText;
-        }
-        return Qt::PlainText;
-    };
-
-    QMap<QAbstractButton*, int> btnsMap;
-    auto makeButton = [&btnsMap](const ButtonData& b, QWidget* parent) {
-        QPushButton* btn = new QPushButton(parent);
-        btn->setText(QString::fromStdString(b.text));
-        btnsMap[btn] = b.btn;
-        return btn;
-    };
-
-    QMessageBox msgBox;
-    msgBox.setWindowTitle(QString::fromStdString(title));
-    msgBox.setText(QString::fromStdString(text.text));
-    msgBox.setTextFormat(format(text.format));
-
-    for (const ButtonData& b : btns) {
-        QPushButton* btn = makeButton(b, &msgBox);
-        msgBox.addButton(btn, QMessageBox::ActionRole);
-
-        if (b.btn == defBtn) {
-            msgBox.setDefaultButton(btn);
-        }
-    }
-
-    QGridLayout* layout = (QGridLayout*)msgBox.layout();
-    QSpacerItem* hSpacer = new QSpacerItem(300, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    layout->addItem(hSpacer, layout->rowCount(), 0, 1, layout->columnCount());
-
-    msgBox.exec();
-
-    QAbstractButton* clickedBtn = msgBox.clickedButton();
-    int retBtn = btnsMap.value(clickedBtn);
-
-    return retBtn;
+IInteractive::Result Interactive::question(const std::string& title, const Text& text, const ButtonDatas& btns, int defBtn,
+                                           const Options& options) const
+{
+    return standardDialogResult(provider()->question(title, text, btns, defBtn, options));
 }
 
 IInteractive::ButtonData Interactive::buttonData(Button b) const
 {
+    constexpr bool accent = true;
+
     switch (b) {
     case IInteractive::Button::NoButton:    return ButtonData(int(b), "");
     case IInteractive::Button::Ok:          return ButtonData(int(b), trc("ui", "OK"));
-    case IInteractive::Button::Save:        return ButtonData(int(b), trc("ui", "Save"));
+    case IInteractive::Button::Save:        return ButtonData(int(b), trc("ui", "Save"), accent);
     case IInteractive::Button::SaveAll:     return ButtonData(int(b), trc("ui", "Save All"));
+    case IInteractive::Button::DontSave:    return ButtonData(int(b), trc("ui", "Don't save"));
     case IInteractive::Button::Open:        return ButtonData(int(b), trc("ui", "Open"));
     case IInteractive::Button::Yes:         return ButtonData(int(b), trc("ui", "Yes"));
     case IInteractive::Button::YesToAll:    return ButtonData(int(b), trc("ui", "Yes to All"));
@@ -125,47 +96,56 @@ IInteractive::ButtonData Interactive::buttonData(Button b) const
     return ButtonData(int(b), "");
 }
 
-void Interactive::message(Type type, const std::string& title, const std::string& text) const
+IInteractive::Result Interactive::info(const std::string& title, const std::string& text, const ButtonDatas& buttons,
+                                       int defBtn,
+                                       const Options& options) const
 {
-    //! NOTE Temporarily, need to replace the qml dialog
+    return standardDialogResult(provider()->info(title, text, buttons, defBtn, options));
+}
 
-    auto icon = [](Type type) {
-        switch (type) {
-        case Type::Info:        return QMessageBox::Information;
-        case Type::Warning:     return QMessageBox::Warning;
-        case Type::Critical:    return QMessageBox::Critical;
-        }
-        return QMessageBox::NoIcon;
-    };
+Interactive::Result Interactive::warning(const std::string& title, const std::string& text, const Buttons& buttons, const Button& defBtn,
+                                         const Options& options) const
+{
+    return standardDialogResult(provider()->warning(title, text, buttonDataList(buttons), int(defBtn), options));
+}
 
-    QMessageBox msgBox;
-    msgBox.setWindowTitle(QString::fromStdString(title));
-    msgBox.setText(QString::fromStdString(text));
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.setIcon(icon(type));
+IInteractive::Result Interactive::warning(const std::string& title, const Text& text, const ButtonDatas& buttons,
+                                          int defBtn,
+                                          const QFlags<IInteractive::Option>& options) const
+{
+    return standardDialogResult(provider()->warning(title, text.text, buttons, defBtn, options));
+}
 
-    QGridLayout* layout = (QGridLayout*)msgBox.layout();
-    QSpacerItem* hSpacer = new QSpacerItem(300, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    layout->addItem(hSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+IInteractive::Result Interactive::error(const std::string& title, const std::string& text, const Buttons& buttons, const Button& defBtn,
+                                        const Options& options) const
+{
+    return standardDialogResult(provider()->error(title, text, buttonDataList(buttons), int(defBtn), options));
+}
 
-    msgBox.exec();
+IInteractive::Result Interactive::error(const std::string& title, const Text& text, const ButtonDatas& buttons,
+                                        int defBtn,
+                                        const Options& options) const
+{
+    return standardDialogResult(provider()->error(title, text.text, buttons, defBtn, options));
 }
 
 mu::io::path Interactive::selectOpeningFile(const QString& title, const io::path& dir, const QString& filter)
 {
-    QString path = QFileDialog::getOpenFileName(mainWindow()->qMainWindow(), title, dir.toQString(), filter);
+    QString path = QFileDialog::getOpenFileName(nullptr, title, dir.toQString(), filter);
     return path;
 }
 
-io::path Interactive::selectSavingFile(const QString& title, const io::path& dir, const QString& filter)
+io::path Interactive::selectSavingFile(const QString& title, const io::path& dir, const QString& filter, bool confirmOverwrite)
 {
-    QString path = QFileDialog::getSaveFileName(mainWindow()->qMainWindow(), title, dir.toQString(), filter);
+    QFileDialog::Options options;
+    options.setFlag(QFileDialog::DontConfirmOverwrite, !confirmOverwrite);
+    QString path = QFileDialog::getSaveFileName(nullptr, title, dir.toQString(), filter, nullptr, options);
     return path;
 }
 
 io::path Interactive::selectDirectory(const QString& title, const io::path& dir)
 {
-    QString path = QFileDialog::getExistingDirectory(mainWindow()->qMainWindow(), title, dir.toQString());
+    QString path = QFileDialog::getExistingDirectory(nullptr, title, dir.toQString());
     return path;
 }
 
@@ -221,4 +201,16 @@ Ret Interactive::openUrl(const std::string& url) const
 {
     QUrl _url(QString::fromStdString(url));
     return QDesktopServices::openUrl(_url);
+}
+
+IInteractive::ButtonDatas Interactive::buttonDataList(const Buttons& buttons) const
+{
+    ButtonDatas result;
+    result.reserve(buttons.size());
+
+    for (Button b : buttons) {
+        result.push_back(buttonData(b));
+    }
+
+    return result;
 }

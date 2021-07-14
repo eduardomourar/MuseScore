@@ -854,7 +854,7 @@ void PowerTab::addToScore(ptSection& sec)
         t = new RehearsalMark(score);
         t->setFrameType(FrameType::NO_FRAME);
         t->setPlainText(QString::fromUtf8(sec.partName.data(), int(sec.partName.size())));
-        t->setOffset(QPointF(10.0, 0.0));
+        t->setOffset(mu::PointF(10.0, 0.0));
         t->setTrack(0);
         seg->add(t);
     }
@@ -1289,7 +1289,7 @@ Score::FileError PowerTab::read()
     int id = 0;
     for (Part* part : score->parts()) {
         QMultiMap<int, int> tracks;
-        Score* pscore = new Score(score);
+        Score* pscore = score->createScore();
 
 //TODO-ws            pscore->tuning.clear();
         auto& info = song.track1.infos[id++];

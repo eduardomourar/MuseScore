@@ -66,7 +66,7 @@
 #include "libmscore/rehearsalmark.h"
 #include "libmscore/marker.h"
 #include "libmscore/jump.h"
-#include "libmscore/sym.h"
+#include "libmscore/symid.h"
 #include "libmscore/bracketItem.h"
 
 #include "modularity/ioc.h"
@@ -75,7 +75,7 @@
 namespace ove {
 static std::shared_ptr<mu::iex::ove::IOveConfiguration> configuration()
 {
-    return mu::framework::ioc()->resolve<mu::iex::ove::IOveConfiguration>("iex_ove");
+    return mu::modularity::ioc()->resolve<mu::iex::ove::IOveConfiguration>("iex_ove");
 }
 }
 
@@ -735,7 +735,7 @@ void OveToMScore::convertTrackElements(int track)
                     }
 
                     if (y_off != 0) {
-                        ottava->setOffset(QPointF(0, y_off * m_score->spatium()));
+                        ottava->setOffset(mu::PointF(0, y_off * m_score->spatium()));
                     }
 
                     ottava->setTick(Fraction::fromTicks(absTick));

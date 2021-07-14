@@ -32,14 +32,15 @@ public:
 
     virtual void setSampleRate(unsigned int sampleRate) override;
 
-    mu::async::Channel<unsigned int> streamsCountChanged() const override;
-    const float* data() const override;
-    virtual void setBufferSize(unsigned int samples) override;
+    bool isActive() const override;
+    void setIsActive(bool arg) override;
+
+    mu::async::Channel<unsigned int> audioChannelsCountChanged() const override;
 
 protected:
     unsigned int m_sampleRate = 1;
-    std::vector<float> m_buffer = {};
     async::Channel<unsigned int> m_streamsCountChanged;
+    bool m_isActive = false;
 };
 }
 

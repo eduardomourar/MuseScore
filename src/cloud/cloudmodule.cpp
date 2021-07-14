@@ -24,13 +24,17 @@
 #include <QQmlEngine>
 #include "modularity/ioc.h"
 #include "ui/iuiengine.h"
+#include "ui/iuiactionsregister.h"
 
-#include "internal/accountcontroller.h"
+#include "internal/cloudservice.h"
+#include "internal/cloudconfiguration.h"
 #include "view/accountmodel.h"
 
 using namespace mu::cloud;
+using namespace mu::modularity;
 
-static AccountController* m_accountController = nullptr;
+static std::shared_ptr<CloudConfiguration> s_cloudConfiguration = std::make_shared<CloudConfiguration>();
+static std::shared_ptr<CloudService> s_cloudService = std::make_shared<CloudService>();
 
 static void cloud_init_qrc()
 {
@@ -44,8 +48,9 @@ std::string CloudModule::moduleName() const
 
 void CloudModule::registerExports()
 {
-    m_accountController = new AccountController();
-    framework::ioc()->registerExport<IAccountController>(moduleName(), m_accountController);
+    ioc()->registerExport<ICloudConfiguration>(moduleName(), s_cloudConfiguration);
+    ioc()->registerExport<IAuthorizationService>(moduleName(), s_cloudService);
+    ioc()->registerExport<IUploadingService>(moduleName(), s_cloudService);
 }
 
 void CloudModule::registerResources()
@@ -57,13 +62,15 @@ void CloudModule::registerUiTypes()
 {
     qmlRegisterType<AccountModel>("MuseScore.Cloud", 1, 0, "AccountModel");
 
-    framework::ioc()->resolve<ui::IUiEngine>(moduleName())->addSourceImportPath(cloud_QML_IMPORT);
+    modularity::ioc()->resolve<ui::IUiEngine>(moduleName())->addSourceImportPath(cloud_QML_IMPORT);
 }
 
 void CloudModule::onInit(const framework::IApplication::RunMode& mode)
 {
-    if (framework::IApplication::RunMode::Editor != mode) {
+    if (mode != framework::IApplication::RunMode::Editor) {
         return;
     }
-    m_accountController->init();
+
+    s_cloudConfiguration->init();
+    s_cloudService->init();
 }

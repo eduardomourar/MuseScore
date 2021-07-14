@@ -24,6 +24,10 @@
 using namespace mu;
 using namespace mu::midi;
 
+void DummyMidiInPort::init()
+{
+}
+
 std::vector<MidiDevice> DummyMidiInPort::devices() const
 {
     MidiDevice d;
@@ -69,7 +73,7 @@ bool DummyMidiInPort::isRunning() const
     return m_running;
 }
 
-async::Channel<std::pair<tick_t, Event> > DummyMidiInPort::eventReceived() const
+async::Channel<tick_t, Event> DummyMidiInPort::eventReceived() const
 {
     return m_eventReceived;
 }

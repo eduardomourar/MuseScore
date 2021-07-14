@@ -34,14 +34,15 @@ class NavigationSection;
 class NavigationPanel : public AbstractNavigation, public INavigationPanel, public async::Asyncable
 {
     Q_OBJECT
-    Q_PROPERTY(mu::ui::NavigationSection* section READ section WRITE setSection NOTIFY sectionChanged)
+    Q_PROPERTY(mu::ui::NavigationSection* section READ section_property WRITE setSection_property NOTIFY sectionChanged)
     Q_PROPERTY(QmlDirection direction READ direction_property WRITE setDirection NOTIFY directionChanged)
+    Q_PROPERTY(QString directionInfo READ directionInfo NOTIFY directionChanged)
 
 public:
     explicit NavigationPanel(QObject* parent = nullptr);
     ~NavigationPanel() override;
 
-    //! NOTE Please sync with IKeyNavigationSubSection::Direction
+    //! NOTE Please sync with INavigationPanel::Direction
     enum QmlDirection {
         Horizontal = 0,
         Vertical,
@@ -64,27 +65,28 @@ public:
     void onEvent(EventPtr e) override;
 
     QmlDirection direction_property() const;
+    QString directionInfo() const;
     Direction direction() const override;
 
     const std::set<INavigationControl*>& controls() const override;
     async::Notification controlsListChanged() const override;
 
-    async::Channel<PanelControl> forceActiveRequested() const override;
+    PanelControlChannel activeRequested() const override;
 
-    NavigationSection* section() const;
-
-    void componentComplete() override;
+    INavigationSection* section() const override;
+    NavigationSection* section_property() const;
 
     void addControl(NavigationControl* control);
     void removeControl(NavigationControl* control);
 
 public slots:
-    void setSection(NavigationSection* section);
+    void setSection_property(NavigationSection* section);
+    void setSection(INavigationSection* section);
     void setDirection(QmlDirection direction);
 
 signals:
     void sectionChanged(NavigationSection* section);
-    void directionChanged(QmlDirection direction);
+    void directionChanged();
 
 private slots:
     void onSectionDestroyed();
@@ -93,7 +95,7 @@ private:
     NavigationSection* m_section = nullptr;
     std::set<INavigationControl*> m_controls;
     async::Notification m_controlsListChanged;
-    async::Channel<PanelControl> m_forceActiveRequested;
+    PanelControlChannel m_forceActiveRequested;
     QmlDirection m_direction = QmlDirection::Horizontal;
 };
 }

@@ -22,26 +22,17 @@
 #ifndef MU_PLAYBACK_PLAYBACKTOOLBARMODEL_H
 #define MU_PLAYBACK_PLAYBACKTOOLBARMODEL_H
 
-#include <QAbstractListModel>
+#include "ui/view/abstractmenumodel.h"
 
 #include "modularity/ioc.h"
 #include "iplaybackcontroller.h"
-#include "actions/iactionsdispatcher.h"
-#include "ui/iuiactionsregister.h"
-#include "ui/view/abstractmenumodel.h"
-#include "actions/actiontypes.h"
-#include "workspace/iworkspacemanager.h"
-#include "iinteractive.h"
 
 namespace mu::playback {
-class PlaybackToolBarModel : public QAbstractListModel, public ui::AbstractMenuModel
+class PlaybackToolBarModel : public ui::AbstractMenuModel
 {
     Q_OBJECT
 
-    INJECT(playback, actions::IActionsDispatcher, dispatcher)
-    INJECT(playback, ui::IUiActionsRegister, uiactionsRegister)
     INJECT(playback, IPlaybackController, playbackController)
-    INJECT(playback, workspace::IWorkspaceManager, workspaceManager)
 
     Q_PROPERTY(bool isToolbarFloating READ isToolbarFloating WRITE setIsToolbarFloating NOTIFY isToolbarFloatingChanged)
     Q_PROPERTY(bool isPlayAllowed READ isPlayAllowed NOTIFY isPlayAllowedChanged)
@@ -60,10 +51,6 @@ class PlaybackToolBarModel : public QAbstractListModel, public ui::AbstractMenuM
 public:
     explicit PlaybackToolBarModel(QObject* parent = nullptr);
 
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex& index, int role) const override;
-    QHash<int, QByteArray> roleNames() const override;
-
     bool isToolbarFloating() const;
     bool isPlayAllowed() const;
 
@@ -78,8 +65,7 @@ public:
 
     QVariant tempo() const;
 
-    Q_INVOKABLE void load();
-    Q_INVOKABLE void handleAction(const QString& actionCode);
+    Q_INVOKABLE void load() override;
 
 public slots:
     void setIsToolbarFloating(bool floating);
@@ -95,20 +81,10 @@ signals:
     void playTimeChanged();
 
 private:
-    enum Roles {
-        CodeRole = Qt::UserRole + 1,
-        HintRole,
-        IconRole,
-        CheckedRole,
-        SubitemsRole,
-    };
-
     void setupConnections();
 
     void updateActions();
     void onActionsStateChanges(const actions::ActionCodeList& codes) override;
-
-    actions::ActionCodeList currentWorkspaceActionCodes() const;
 
     bool isAdditionalAction(const actions::ActionCode& actionCode) const;
 

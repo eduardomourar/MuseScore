@@ -70,7 +70,7 @@ class QmlPlugin : public QQuickItem
 
 protected:
     QString _filePath;              // the path of the source file, without file name
-    MuseScoreCore* msc() const;
+    virtual MuseScoreCore* msc() const = 0;
 
 public slots:
     virtual void endCmd(const QMap<QString, QVariant>&) = 0;
@@ -100,7 +100,7 @@ public:
     int mscoreVersion() const { return Ms::version(); }
     int mscoreMajorVersion() const { return majorVersion(); }
     int mscoreMinorVersion() const { return minorVersion(); }
-    int mscoreUpdateVersion() const { return updateVersion(); }
+    int mscoreUpdateVersion() const { return patchVersion(); }
     qreal mscoreDPI() const { return DPI; }
 };
 } // namespace Ms

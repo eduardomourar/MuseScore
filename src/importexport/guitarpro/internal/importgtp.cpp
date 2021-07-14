@@ -25,6 +25,7 @@
 #include <cmath>
 #include <QTextCodec>
 #include <QDebug>
+#include <QRegularExpression>
 
 #include "importptb.h"
 
@@ -369,7 +370,7 @@ void GuitarPro::initGuitarProDrumset()
     gpDrumset->drum(81) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Open Triangle"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
     gpDrumset->drum(82) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Shaker"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
     gpDrumset->drum(83) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Sleigh Bell"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
-    gpDrumset->drum(84) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Bell Tree"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
+    gpDrumset->drum(84) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Mark Tree"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
     gpDrumset->drum(85) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Castanets"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
     gpDrumset->drum(86) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Mute Surdo"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
     gpDrumset->drum(87) = DrumInstrument(QT_TRANSLATE_NOOP("drumset", "Open Surdo"), NoteHead::Group::HEAD_NORMAL, 3, Direction::UP);
@@ -770,8 +771,8 @@ void GuitarPro::readLyrics()
     gpLyrics.beatCounter = 0;
 
     QString lyrics = readWordPascalString();
-    lyrics.replace(QRegExp("\n"), " ");
-    lyrics.replace(QRegExp("\r"), " ");
+    lyrics.replace(QRegularExpression("\n"), " ");
+    lyrics.replace(QRegularExpression("\r"), " ");
     auto sl = lyrics.split(" ", Qt::KeepEmptyParts);
     //gpLyrics.lyrics = lyrics.split(" ", Qt::KeepEmptyParts);
     for (auto& str : sl) {
@@ -1919,7 +1920,7 @@ bool GuitarPro1::readNote(int string, Note* note)
 
             int grace_len = MScore::division / 8;
             if (duration == 1) {
-                grace_len = MScore::division / 8;       //32th
+                grace_len = MScore::division / 8;       //32nd
             } else if (duration == 2) {
                 grace_len = MScore::division / 6;       //24th
             } else if (duration == 3) {
@@ -2974,7 +2975,7 @@ Score::FileError importGTP(MasterScore* score, const QString& name)
             continue;
         }
         QMultiMap<int, int> tracks;
-        Score* pscore = new Score(score);
+        Score* pscore = score->createScore();
         //TODO-ws		pscore->showLyrics = score->showLyrics;
         pscore->style().set(Sid::createMultiMeasureRests, false);
         pscore->style().set(Sid::ArpeggioHiddenInStdIfTab, true);

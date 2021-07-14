@@ -68,7 +68,18 @@ mu::async::Channel<INavigation::Index> NavigationSection::indexChanged() const
 
 bool NavigationSection::enabled() const
 {
-    return AbstractNavigation::enabled();
+    if (!AbstractNavigation::enabled()) {
+        return false;
+    }
+
+    bool enbl = false;
+    for (INavigationPanel* p : m_panels) {
+        if (p->enabled()) {
+            enbl = true;
+            break;
+        }
+    }
+    return enbl;
 }
 
 mu::async::Channel<bool> NavigationSection::enabledChanged() const
@@ -98,14 +109,15 @@ void NavigationSection::onEvent(EventPtr e)
 
 void NavigationSection::addPanel(NavigationPanel* panel)
 {
+    TRACEFUNC;
     IF_ASSERT_FAILED(panel) {
         return;
     }
 
     m_panels.insert(panel);
 
-    panel->forceActiveRequested().onReceive(this, [this](const PanelControl& subcon) {
-        m_forceActiveRequested.send(std::make_tuple(this, std::get<0>(subcon), std::get<1>(subcon)));
+    panel->activeRequested().onReceive(this, [this](INavigationPanel* panel, INavigationControl* control) {
+        m_forceActiveRequested.send(this, panel, control);
     });
 
     if (m_panelsListChanged.isConnected()) {
@@ -113,23 +125,44 @@ void NavigationSection::addPanel(NavigationPanel* panel)
     }
 }
 
-mu::async::Channel<SectionPanelControl> NavigationSection::forceActiveRequested() const
+SectionPanelControlChannel NavigationSection::activeRequested() const
 {
     return m_forceActiveRequested;
 }
 
 void NavigationSection::removePanel(NavigationPanel* panel)
 {
+    TRACEFUNC;
     IF_ASSERT_FAILED(panel) {
         return;
     }
 
     m_panels.erase(panel);
-    panel->forceActiveRequested().resetOnReceive(this);
+    panel->activeRequested().resetOnReceive(this);
 
     if (m_panelsListChanged.isConnected()) {
         m_panelsListChanged.notify();
     }
+}
+
+INavigationSection::Type NavigationSection::type() const
+{
+    return static_cast<INavigationSection::Type>(m_type);
+}
+
+NavigationSection::QmlType NavigationSection::type_property() const
+{
+    return m_type;
+}
+
+void NavigationSection::setType(QmlType type)
+{
+    if (m_type == type) {
+        return;
+    }
+
+    m_type = type;
+    emit typeChanged(m_type);
 }
 
 const std::set<INavigationPanel*>& NavigationSection::panels() const

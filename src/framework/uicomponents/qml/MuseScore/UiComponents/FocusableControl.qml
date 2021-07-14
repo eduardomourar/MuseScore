@@ -25,7 +25,8 @@ import MuseScore.Ui 1.0
 FocusScope {
     id: root
 
-    default property alias content: contentItem.data
+    default property alias content: contentItemContaner.data
+    property alias contentItem: contentItemContaner
     property alias background: focusRectItem
 
     property alias mouseArea: mouseAreaItem
@@ -33,25 +34,29 @@ FocusScope {
 
     property alias navigation: keynavItem
 
+    signal navigationActived()
+    signal navigationTriggered()
+
     function ensureActiveFocus() {
         if (!root.activeFocus) {
             root.forceActiveFocus()
-        }
-
-        if (!keynavItem.active) {
-            keynavItem.forceActive()
         }
     }
 
     NavigationControl {
         id: keynavItem
         name: root.objectName
-        enabled: root.enabled
+        enabled: root.enabled && root.visible
 
         onActiveChanged: {
             if (keynavItem.active) {
                 root.ensureActiveFocus()
+                root.navigationActived()
             }
+        }
+
+        onTriggered: {
+            root.navigationTriggered()
         }
     }
 
@@ -72,7 +77,7 @@ FocusScope {
     }
 
     Item {
-        id: contentItem
+        id: contentItemContaner
         objectName: "FocusableControlContent"
         anchors.fill: focusRectItem
         anchors.margins: 2 //! NOTE margin needed to show focus border

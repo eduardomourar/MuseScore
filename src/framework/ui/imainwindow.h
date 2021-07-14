@@ -23,19 +23,48 @@
 #define MU_UI_IMAINWINDOW_H
 
 #include "modularity/imoduleexport.h"
+#include "async/channel.h"
+#include "async/notification.h"
+#include "globaltypes.h"
 
 class QMainWindow;
-class QWidget;
+class QWindow;
+class QScreen;
+class QString;
+class QPoint;
 
 namespace mu::ui {
 class IMainWindow : MODULE_EXPORT_INTERFACE
 {
     INTERFACE_ID(IMainWindow)
+
 public:
     virtual ~IMainWindow() = default;
 
-    virtual QMainWindow* qMainWindow() = 0;
-    virtual void stackUnder(QWidget*) = 0;
+    virtual QWindow* qWindow() const = 0;
+
+    virtual QWindow* topWindow() const = 0;
+    virtual void pushWindow(QWindow* w) = 0;
+    virtual void popWindow(QWindow* w) = 0;
+
+    virtual void requestShowOnBack() = 0;
+    virtual void requestShowOnFront() = 0;
+
+    virtual bool isFullScreen() const = 0;
+    virtual void toggleFullScreen() = 0;
+    virtual const QScreen* screen() const = 0;
+
+    virtual void requestChangeToolBarOrientation(const QString& toolBarName, framework::Orientation orientation) = 0;
+    virtual async::Channel<QString, framework::Orientation> changeToolBarOrientationRequested() const = 0;
+
+    virtual void requestShowToolBarDockingHolder(const QPoint& globalPos) = 0;
+    virtual async::Channel<QPoint> showToolBarDockingHolderRequested() const = 0;
+
+    virtual void requestShowPanelDockingHolder(const QPoint& globalPos) = 0;
+    virtual async::Channel<QPoint> showPanelDockingHolderRequested() const = 0;
+
+    virtual void requestHideAllDockingHolders() = 0;
+    virtual async::Notification hideAllDockingHoldersRequested() const = 0;
 };
 }
 

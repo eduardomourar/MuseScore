@@ -32,12 +32,12 @@ void PlaybackCursor::paint(mu::draw::Painter* painter)
     painter->fillRect(m_rect, color());
 }
 
-const QRect& PlaybackCursor::rect() const
+const mu::RectF& PlaybackCursor::rect() const
 {
     return m_rect;
 }
 
-void PlaybackCursor::setRect(const QRect& rect)
+void PlaybackCursor::setRect(const RectF& rect)
 {
     m_rect = rect;
 }

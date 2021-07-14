@@ -60,6 +60,7 @@ option(BUILD_SYSTEM_MODULE "Build system module" ON)
 option(BUILD_NETWORK_MODULE "Build network module" ON)
 option(BUILD_AUDIO_MODULE "Build audio module" ON)
 option(BUILD_USERSCORES_MODULE "Build userscores module" ON)
+option(BUILD_LEARN_MODULE "Build learn module" ON)
 option(BUILD_WORKSPACE_MODULE "Build workspace module" ON)
 option(BUILD_CLOUD_MODULE "Build cloud module" ON)
 option(BUILD_EXTENSIONS_MODULE "Build extensions module" ON)
@@ -67,9 +68,13 @@ option(BUILD_LANGUAGES_MODULE "Build languages module" ON)
 option(BUILD_PLUGINS_MODULE "Build plugins module" ON)
 option(BUILD_PLAYBACK_MODULE "Build playback module" ON)
 option(BUILD_PALETTE_MODULE "Build palette module" ON)
-option(BUILD_INSTRUMENTS_MODULE "Build instruments module" ON)
+option(BUILD_INSTRUMENTSSCENE_MODULE "Build instruments scene module" ON)
 option(BUILD_INSPECTOR_MODULE "Build inspector module" ON)
 option(BUILD_AUTOBOT_MODULE "Build autobot module" OFF)
+option(BUILD_MULTIINSTANCES_MODULE "Build multiinstances module" ON)
+set(YOUTUBE_API_KEY "" CACHE STRING "YouTube API key")
+
+option(USE_SCORE_ACCESSIBLE_TREE "Use score accessible tree" OFF)
 
 option(SOUNDFONT3    "Ogg Vorbis compressed fonts"        ON)  # Enable Ogg Vorbis compressed fonts, requires Ogg & Vorbis
 option(DOWNLOAD_SOUNDFONT "Download the latest soundfont version as part of the build process" ON)
@@ -85,7 +90,6 @@ option(QML_LOAD_FROM_SOURCE "Load qml files from source (not resource)" OFF)
 option(TRACE_DRAW_OBJ_ENABLED "Trace draw objects" OFF)
 
 option(USE_SYSTEM_FREETYPE "Use system FreeType" OFF) # requires freetype >= 2.5.2, does not work on win
-option(BUILD_WEBENGINE "Built in webengine support" ON)
 set(SCRIPT_INTERFACE  TRUE)
 
 set(VST3_SDK_VERSION "3.7")
@@ -95,8 +99,6 @@ set(VST3_SDK_PATH "" CACHE PATH "Path to VST3_SDK. SDK version >= ${VST3_SDK_VER
 set(JACK_LONGNAME "JACK (Jack Audio Connection Kit)")
 set(JACK_MIN_VERSION "0.98.0")
 option(BUILD_JACK    "Build with support for ${JACK_LONGNAME} audio backend. JACK >= ${JACK_MIN_VERSION} will be needed." OFF)
-
-option(KDAB_DOCKWIDGETS "Build KDAB dockwidgets" OFF)
 
 if (BUILD_PORTABLEAPPS)
     set(WIN_PORTABLE 1)
@@ -137,17 +139,6 @@ configure_file (
 ###########################################
 # Setup external dependencies
 ###########################################
-
-# We need this early, before FindQt5
-if (BUILD_WEBENGINE)
-   if (CC_IS_MINGW)
-      set(USE_WEBENGINE 0)
-   else (CC_IS_MINGW)
-      set(USE_WEBENGINE 1)
-   endif(CC_IS_MINGW)
-else (BUILD_WEBENGINE)
-   set(USE_WEBENGINE 0)
-endif (BUILD_WEBENGINE)
 
 set(QT_MIN_VERSION    "5.15.0")
 include(FindQt5)
@@ -225,15 +216,16 @@ add_subdirectory(src/framework/global) # should be first to work pch
 add_subdirectory(thirdparty/qzip)
 add_subdirectory(src)
 
-if (KDAB_DOCKWIDGETS)
-    if (NOT BUILD_SHARED_LIBS)
-        set(KDDockWidgets_STATIC ON)
-    endif(NOT BUILD_SHARED_LIBS)
+###########################################
+# Setup the KDDockWidgets lib
+###########################################
+if (NOT BUILD_SHARED_LIBS)
+    set(KDDockWidgets_STATIC ON CACHE BOOL "Build static versions of the libraries" FORCE)
+endif(NOT BUILD_SHARED_LIBS)
 
-    set(KDDockWidgets_QTQUICK ON)
-    set(KDDockWidgets_EXAMPLES OFF)
-    add_subdirectory(thirdparty/KDDockWidgets)
-endif(KDAB_DOCKWIDGETS)
+set(KDDockWidgets_QTQUICK ON CACHE BOOL "Build for QtQuick instead of QtWidgets" FORCE)
+set(KDDockWidgets_EXAMPLES OFF CACHE BOOL "Build the examples" FORCE)
+add_subdirectory(thirdparty/KDDockWidgets)
 
 ###########################################
 # Setup Packaging

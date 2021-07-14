@@ -32,22 +32,33 @@
 #include "view/scorethumbnail.h"
 #include "view/templatesmodel.h"
 #include "view/templatepaintview.h"
+#include "view/exportdialogmodel.h"
 #include "internal/filescorecontroller.h"
 #include "internal/userscoresconfiguration.h"
 #include "internal/userscoresservice.h"
+#include "internal/exportscorescenario.h"
 #include "internal/templatesrepository.h"
 #include "internal/userscoresuiactions.h"
+
+#ifdef Q_OS_MAC
+#include "internal/platform/macos/macosrecentfilescontroller.h"
+#elif defined (Q_OS_WIN)
+#include "internal/platform/windows/windowsrecentfilescontroller.h"
+#else
+#include "internal/platform/stub/stubrecentfilescontroller.h"
+#endif
 
 #include "ui/iinteractiveuriregister.h"
 #include "ui/iuiactionsregister.h"
 
 using namespace mu::userscores;
-using namespace mu::framework;
+using namespace mu::modularity;
 using namespace mu::ui;
 
 static std::shared_ptr<FileScoreController> s_fileController = std::make_shared<FileScoreController>();
 static std::shared_ptr<UserScoresConfiguration> s_userScoresConfiguration = std::make_shared<UserScoresConfiguration>();
 static std::shared_ptr<UserScoresService> s_userScoresService = std::make_shared<UserScoresService>();
+static std::shared_ptr<ExportScoreScenario> s_exportScoreScenario = std::make_shared<ExportScoreScenario>();
 
 static void userscores_init_qrc()
 {
@@ -65,6 +76,15 @@ void UserScoresModule::registerExports()
     ioc()->registerExport<IUserScoresService>(moduleName(), s_userScoresService);
     ioc()->registerExport<ITemplatesRepository>(moduleName(), new TemplatesRepository());
     ioc()->registerExport<IFileScoreController>(moduleName(), s_fileController);
+    ioc()->registerExport<IExportScoreScenario>(moduleName(), s_exportScoreScenario);
+
+#ifdef Q_OS_MAC
+    ioc()->registerExport<IPlatformRecentFilesController>(moduleName(), new MacOSRecentFilesController());
+#elif defined (Q_OS_WIN)
+    ioc()->registerExport<IPlatformRecentFilesController>(moduleName(), new WindowsRecentFilesController());
+#else
+    ioc()->registerExport<IPlatformRecentFilesController>(moduleName(), new StubRecentFilesController());
+#endif
 }
 
 void UserScoresModule::resolveImports()
@@ -78,6 +98,9 @@ void UserScoresModule::resolveImports()
     if (ir) {
         ir->registerUri(Uri("musescore://userscores/newscore"),
                         ContainerMeta(ContainerType::QmlDialog, "MuseScore/UserScores/NewScoreDialog.qml"));
+
+        ir->registerUri(Uri("musescore://userscores/export"),
+                        ContainerMeta(ContainerType::QmlDialog, "MuseScore/UserScores/ExportDialog.qml"));
     }
 }
 
@@ -91,6 +114,7 @@ void UserScoresModule::registerUiTypes()
     qmlRegisterType<RecentScoresModel>("MuseScore.UserScores", 1, 0, "RecentScoresModel");
     qmlRegisterType<NewScoreModel>("MuseScore.UserScores", 1, 0, "NewScoreModel");
     qmlRegisterType<AdditionalInfoModel>("MuseScore.UserScores", 1, 0, "AdditionalInfoModel");
+    qmlRegisterType<ExportDialogModel>("MuseScore.UserScores", 1, 0, "ExportDialogModel");
 
     qmlRegisterType<ScoreThumbnail>("MuseScore.UserScores", 1, 0, "ScoreThumbnail");
     qmlRegisterType<TemplatesModel>("MuseScore.UserScores", 1, 0, "TemplatesModel");
@@ -99,9 +123,9 @@ void UserScoresModule::registerUiTypes()
     ioc()->resolve<ui::IUiEngine>(moduleName())->addSourceImportPath(userscores_QML_IMPORT);
 }
 
-void UserScoresModule::onInit(const IApplication::RunMode& mode)
+void UserScoresModule::onInit(const framework::IApplication::RunMode& mode)
 {
-    if (IApplication::RunMode::Converter == mode) {
+    if (framework::IApplication::RunMode::Converter == mode) {
         return;
     }
     s_userScoresConfiguration->init();

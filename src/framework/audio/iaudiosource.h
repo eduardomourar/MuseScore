@@ -25,7 +25,10 @@
 
 #include <memory>
 #include <vector>
+
 #include "async/channel.h"
+
+#include "audiotypes.h"
 
 namespace mu::audio {
 class IAudioSource
@@ -33,22 +36,21 @@ class IAudioSource
 public:
     virtual ~IAudioSource() = default;
 
+    virtual bool isActive() const = 0;
+    virtual void setIsActive(bool arg) = 0;
+
+    virtual void seek(const msecs_t newPositionMsecs) { UNUSED(newPositionMsecs) }
+
     //! set current sample rate. Called by destination.
     virtual void setSampleRate(unsigned int sampleRate) = 0;
 
     //! return substream count for this source: 1 for mono, 2 for stereo, 6 for surround
-    virtual unsigned int streamCount() const = 0;
+    virtual unsigned int audioChannelsCount() const = 0;
 
-    virtual async::Channel<unsigned int> streamsCountChanged() const = 0;
+    virtual async::Channel<unsigned int> audioChannelsCountChanged() const = 0;
 
     //! move buffer forward for sampleCount samples
-    virtual void forward(unsigned int sampleCount) = 0;
-
-    //! const access to the source's output buffer
-    virtual const float* data() const = 0;
-
-    //! set the mix step in samples
-    virtual void setBufferSize(unsigned int samples) = 0;
+    virtual void process(float* buffer, unsigned int sampleCount) = 0;
 };
 
 using IAudioSourcePtr = std::shared_ptr<IAudioSource>;

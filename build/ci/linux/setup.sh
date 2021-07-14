@@ -79,7 +79,6 @@ apt_packages_runtime=(
   libegl1-mesa-dev
   libodbc1
   libpq-dev
-  libssl1.0.0
   libxcomposite-dev
   libxcursor-dev
   libxi-dev
@@ -105,7 +104,7 @@ apt-get install -y --no-install-recommends \
 ##########################################################################
 
 # Get newer Qt (only used cached version if it is the same)
-qt_version="5151"
+qt_version="5152"
 qt_dir="Qt/${qt_version}"
 if [[ ! -d "${qt_dir}" ]]; then
   mkdir -p "${qt_dir}"

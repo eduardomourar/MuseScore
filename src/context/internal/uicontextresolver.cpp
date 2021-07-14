@@ -21,45 +21,60 @@
  */
 #include "uicontextresolver.h"
 
+#include "log.h"
+
 using namespace mu::context;
 using namespace mu::ui;
 
 static const mu::Uri HOME_PAGE_URI("musescore://home");
 static const mu::Uri NOTATION_PAGE_URI("musescore://notation");
 
+static const QString NOTATION_NAVIGATION_SECTION("NotationView");
+
 void UiContextResolver::init()
 {
     interactive()->currentUri().ch.onReceive(this, [this](const Uri&) {
-        m_currentUiContextChanged.notify();
+        notifyAboutContextChanged();
     });
 
     playbackController()->isPlayingChanged().onNotify(this, [this]() {
-        m_currentUiContextChanged.notify();
+        notifyAboutContextChanged();
     });
 
     globalContext()->currentNotationChanged().onNotify(this, [this]() {
         auto notation = globalContext()->currentNotation();
         if (notation) {
             notation->interaction()->selectionChanged().onNotify(this, [this]() {
-                m_currentUiContextChanged.notify();
+                notifyAboutContextChanged();
             });
 
             notation->interaction()->textEditingStarted().onNotify(this, [this]() {
-                m_currentUiContextChanged.notify();
+                notifyAboutContextChanged();
+            });
+
+            notation->undoStack()->stackChanged().onNotify(this, [this]() {
+                notifyAboutContextChanged();
             });
         }
-        m_currentUiContextChanged.notify();
+        notifyAboutContextChanged();
     });
+
+    navigationController()->navigationChanged().onNotify(this, [this]() {
+        notifyAboutContextChanged();
+    });
+}
+
+void UiContextResolver::notifyAboutContextChanged()
+{
+    TRACEFUNC;
+    m_currentUiContextChanged.notify();
 }
 
 UiContext UiContextResolver::currentUiContext() const
 {
+    TRACEFUNC;
     ValCh<Uri> currentUri = interactive()->currentUri();
     if (currentUri.val == HOME_PAGE_URI) {
-        if (playbackController()->isPlaying()) {
-            return context::UiCtxPlaying;
-        }
-
         return context::UiCtxHomeOpened;
     }
 
@@ -71,16 +86,9 @@ UiContext UiContextResolver::currentUiContext() const
             return context::UiCtxUnknown;
         }
 
-        if (notation->interaction()->isTextEditingStarted()) {
-            return context::UiCtxNotationTextEditing;
-        }
-
-        if (playbackController()->isPlaying()) {
-            return context::UiCtxPlaying;
-        }
-
-        if (!notation->interaction()->selection()->isNone()) {
-            return context::UiCtxNotationHasSelection;
+        ui::INavigationSection* activeSection = navigationController()->activeSection();
+        if (!activeSection || activeSection->name() == NOTATION_NAVIGATION_SECTION) {
+            return context::UiCtxNotationFocused;
         }
 
         return context::UiCtxNotationOpened;
@@ -91,22 +99,13 @@ UiContext UiContextResolver::currentUiContext() const
 
 bool UiContextResolver::match(const ui::UiContext& currentCtx, const ui::UiContext& actCtx) const
 {
-    //! NOTE If now editing the notation text, then we allow actions only with the context `UiCtxNotationTextEditing`,
-    //! all others, even `UiCtxAny`, are forbidden
-    if (currentCtx == context::UiCtxNotationTextEditing) {
-        return actCtx == context::UiCtxNotationTextEditing;
-    }
-
     if (actCtx == context::UiCtxAny) {
         return true;
     }
 
-    //! NOTE If the current context is `UiCtxNotationHasSelection`, then we allow `UiCtxNotationOpened` too
-    if (currentCtx == context::UiCtxNotationHasSelection) {
-        if (actCtx == context::UiCtxNotationOpened) {
-            return true;
-        }
-        return actCtx == context::UiCtxNotationHasSelection;
+    //! NOTE If the current context is `UiCtxNotationFocused`, then we allow `UiCtxNotationOpened` too
+    if (currentCtx == context::UiCtxNotationFocused && actCtx == context::UiCtxNotationOpened) {
+        return true;
     }
 
     return currentCtx == actCtx;
@@ -119,7 +118,7 @@ bool UiContextResolver::matchWithCurrent(const UiContext& ctx) const
     }
 
     UiContext currentCtx = currentUiContext();
-    return currentCtx == ctx;
+    return match(currentCtx, ctx);
 }
 
 mu::async::Notification UiContextResolver::currentUiContextChanged() const

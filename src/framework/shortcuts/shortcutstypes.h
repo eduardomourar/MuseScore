@@ -26,6 +26,8 @@
 #include <list>
 #include <QKeySequence>
 
+#include "midi/midievent.h"
+
 namespace mu::shortcuts {
 struct Shortcut
 {
@@ -45,6 +47,68 @@ struct Shortcut
 };
 
 using ShortcutList = std::list<Shortcut>;
+
+enum RemoteEventType {
+    Undefined = 0,
+    Note,
+    Controller
+};
+
+struct RemoteEvent {
+    RemoteEventType type = RemoteEventType::Undefined;
+    int value = -1;
+
+    RemoteEvent() = default;
+    RemoteEvent(RemoteEventType type, int value)
+        : type(type), value(value) {}
+
+    bool isValid() const
+    {
+        return type != RemoteEventType::Undefined && value != -1;
+    }
+
+    bool operator ==(const RemoteEvent& other) const
+    {
+        return type == other.type && value == other.value;
+    }
+};
+
+struct MidiControlsMapping {
+    std::string action;
+    RemoteEvent event;
+
+    MidiControlsMapping() = default;
+    MidiControlsMapping(const std::string& action)
+        : action(action) {}
+
+    bool isValid() const
+    {
+        return !action.empty() && event.isValid();
+    }
+
+    bool operator ==(const MidiControlsMapping& other) const
+    {
+        return action == other.action && other.event == event;
+    }
+};
+
+using MidiMappingList = std::list<MidiControlsMapping>;
+
+inline RemoteEvent remoteEventFromMidiEvent(const midi::Event& midiEvent)
+{
+    RemoteEvent event;
+    bool isNote = midiEvent.isOpcodeIn({ midi::Event::Opcode::NoteOff, midi::Event::Opcode::NoteOn });
+    bool isController = midiEvent.isOpcodeIn({ midi::Event::Opcode::ControlChange });
+    if (isNote) {
+        event.type = RemoteEventType::Note;
+        event.value = midiEvent.note();
+    } else if (isController) {
+        event.type = RemoteEventType::Controller;
+        event.value = midiEvent.index();
+    }
+
+    return event;
+}
 }
 
 #endif // MU_SHORTCUTS_SHORTCUTSTYPES_H

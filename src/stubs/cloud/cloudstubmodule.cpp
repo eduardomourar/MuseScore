@@ -24,11 +24,10 @@
 #include "modularity/ioc.h"
 #include "ui/iuiengine.h"
 
-#include "accountcontrollerstub.h"
-#include "mp3exporterstub.h"
+#include "authorizationservicestub.h"
 
 using namespace mu::cloud;
-using namespace mu::framework;
+using namespace mu::modularity;
 
 static void cloud_init_qrc()
 {
@@ -42,8 +41,7 @@ std::string CloudStubModule::moduleName() const
 
 void CloudStubModule::registerExports()
 {
-    ioc()->registerExport<IAccountController>(moduleName(), new AccountControllerStub());
-    ioc()->registerExport<IMp3Exporter>(moduleName(), new Mp3Exporter());
+    ioc()->registerExport<IAuthorizationService>(moduleName(), new AuthorizationServiceStub());
 }
 
 void CloudStubModule::registerResources()

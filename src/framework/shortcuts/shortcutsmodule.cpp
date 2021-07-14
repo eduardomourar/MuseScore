@@ -33,15 +33,21 @@
 #include "internal/shortcutsconfiguration.h"
 #include "view/shortcutsmodel.h"
 #include "view/editshortcutmodel.h"
+#include "view/mididevicemappingmodel.h"
+#include "view/editmidimappingmodel.h"
 
 #include "ui/iuiengine.h"
 
+#include "diagnostics/idiagnosticspathsregister.h"
+
 using namespace mu::shortcuts;
 using namespace mu::framework;
+using namespace mu::modularity;
 using namespace mu::ui;
 
 static std::shared_ptr<ShortcutsRegister> s_shortcutsRegister = std::make_shared<ShortcutsRegister>();
 static std::shared_ptr<ShortcutsConfiguration> s_configuration = std::make_shared<ShortcutsConfiguration>();
+static std::shared_ptr<MidiRemote> s_midiRemote = std::make_shared<MidiRemote>();
 
 static void shortcuts_init_qrc()
 {
@@ -57,7 +63,7 @@ void ShortcutsModule::registerExports()
 {
     ioc()->registerExport<IShortcutsRegister>(moduleName(), s_shortcutsRegister);
     ioc()->registerExport<IShortcutsController>(moduleName(), new ShortcutsController());
-    ioc()->registerExport<IMidiRemote>(moduleName(), new MidiRemote());
+    ioc()->registerExport<IMidiRemote>(moduleName(), s_midiRemote);
     ioc()->registerExport<IShortcutsConfiguration>(moduleName(), s_configuration);
 }
 
@@ -71,6 +77,8 @@ void ShortcutsModule::registerUiTypes()
     qmlRegisterType<ShortcutsInstanceModel>("MuseScore.Shortcuts", 1, 0, "ShortcutsInstanceModel");
     qmlRegisterType<ShortcutsModel>("MuseScore.Shortcuts", 1, 0, "ShortcutsModel");
     qmlRegisterType<EditShortcutModel>("MuseScore.Shortcuts", 1, 0, "EditShortcutModel");
+    qmlRegisterType<MidiDeviceMappingModel>("MuseScore.Shortcuts", 1, 0, "MidiDeviceMappingModel");
+    qmlRegisterType<EditMidiMappingModel>("MuseScore.Shortcuts", 1, 0, "EditMidiMappingModel");
 
     ioc()->resolve<IUiEngine>(moduleName())->addSourceImportPath(shortcuts_QML_IMPORT);
 }
@@ -83,4 +91,12 @@ void ShortcutsModule::onInit(const IApplication::RunMode& mode)
 
     s_configuration->init();
     s_shortcutsRegister->load();
+    s_midiRemote->load();
+
+    auto pr = ioc()->resolve<diagnostics::IDiagnosticsPathsRegister>(moduleName());
+    if (pr) {
+        pr->reg("shortcutsUserAppDataPath", s_configuration->shortcutsUserAppDataPath());
+        pr->reg("shortcutsAppDataPath", s_configuration->shortcutsAppDataPath());
+        pr->reg("midiMappingUserAppDataPath", s_configuration->midiMappingUserAppDataPath());
+    }
 }

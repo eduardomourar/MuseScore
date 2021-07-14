@@ -21,13 +21,17 @@
  */
 
 #include "symboldialog.h"
-#include "palette/palettecreator.h"
-#include "palette/palette.h"
+
+#include "engraving/style/style.h"
+
 #include "libmscore/score.h"
+#include "libmscore/scorefont.h"
 #include "libmscore/sym.h"
-#include "libmscore/style.h"
 #include "libmscore/element.h"
 #include "libmscore/symbol.h"
+
+#include "palette/palettecreator.h"
+#include "palette/palette.h"
 
 #include "smuflranges.h"
 
@@ -53,7 +57,7 @@ void SymbolDialog::createSymbols()
     int currentIndex = fontList->currentIndex();
     const ScoreFont* f = &ScoreFont::scoreFonts()[currentIndex];
     // init the font if not done yet
-    ScoreFont::fontFactory(f->name());
+    ScoreFont::fontByName(f->name());
     sp->clear();
     for (auto name : (*mu::smuflRanges())[range]) {
         SymId id     = Sym::name2id(name);

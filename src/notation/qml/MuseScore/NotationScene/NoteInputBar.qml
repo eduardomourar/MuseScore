@@ -33,15 +33,18 @@ Rectangle {
 
     property alias navigation: keynavSub
 
+    color: ui.theme.backgroundPrimaryColor
+
     QtObject {
         id: privatesProperties
 
-        property bool isHorizontal: orientation === Qt.Horizontal
+        property bool isHorizontal: root.orientation === Qt.Horizontal
     }
 
     NavigationPanel {
         id: keynavSub
         name: "NoteInputBar"
+        enabled: root.enabled && root.visible
     }
 
     NoteInputBarModel {
@@ -56,13 +59,15 @@ Rectangle {
         id: gridView
         anchors.fill: parent
 
-        sectionRole: "sectionRole"
+        sectionRole: "section"
 
         rowSpacing: 6
         columnSpacing: 6
 
         cellWidth: 36
         cellHeight: cellWidth
+
+        clip: true
 
         model: noteInputModel
 
@@ -73,53 +78,77 @@ Rectangle {
 
         itemDelegate: FlatButton {
             id: btn
+
             property var item: Boolean(itemModel) ? itemModel : null
-            property var hasSubitems: Boolean(item) && item.subitemsRole.length !== 0
-
-            normalStateColor: Boolean(item) && item.checkedRole ? ui.theme.accentColor : "transparent"
-
-            icon: Boolean(item) ? item.iconRole : IconCode.NONE
-            hint: Boolean(item) ? item.hintRole : ""
-
-            iconFont: ui.theme.toolbarIconsFont
-
-            navigation.panel: keynavSub
-            navigation.name: hint
-            navigation.order: Boolean(item) ? item.orderRole : 0
-            isClickOnKeyNavTriggered: false
-            navigation.onTriggered: {
-                if (hasSubitems && item.showSubitemsByPressAndHoldRole) {
-                    btn.pressAndHold()
-                } else {
-                    btn.clicked()
-                }
-            }
-
-            pressAndHoldInterval: 200
+            property var hasMenu: Boolean(item) && item.subitems.length !== 0
 
             width: gridView.cellWidth
             height: gridView.cellWidth
 
-            onClicked: {
-                if (menuLoader.isMenuOpened() || (hasSubitems && !item.showSubitemsByPressAndHoldRole)) {
-                    menuLoader.toggleOpened(item.subitemsRole, btn.navigation)
+            accentButton: (Boolean(item) && item.checked) || menuLoader.isMenuOpened
+            normalStateColor: accentButton ? ui.theme.accentColor : "transparent"
+
+            icon: Boolean(item) ? item.icon : IconCode.NONE
+            iconFont: ui.theme.toolbarIconsFont
+
+            toolTipTitle: Boolean(item) ? item.title : ""
+            toolTipDescription: Boolean(item) ? item.description : ""
+            toolTipShortcut: Boolean(item) ? item.shortcut : ""
+
+            navigation.panel: keynavSub
+            navigation.name: toolTipTitle
+            navigation.order: Boolean(item) ? item.order : 0
+            isClickOnKeyNavTriggered: false
+            navigation.onTriggered: {
+                if (menuLoader.isMenuOpened || hasMenu) {
+                    toggleMenuOpened()
+                } else {
+                    handleAction()
+                }
+            }
+
+            mouseArea.pressAndHoldInterval: 200
+            mouseArea.acceptedButtons: hasMenu && item.isMenuSecondary
+                                       ? Qt.LeftButton | Qt.RightButton
+                                       : Qt.LeftButton
+
+            function toggleMenuOpened() {
+                menuLoader.toggleOpened(item.subitems, btn.navigation)
+            }
+
+            function handleAction() {
+                Qt.callLater(noteInputModel.handleAction, item.code)
+            }
+
+            onClicked: function (mouse) {
+                if (menuLoader.isMenuOpened // If already menu open, close it
+                        || (hasMenu // Or if can open menu
+                            && (!item.isMenuSecondary // And _should_ open menu
+                                || mouse.button === Qt.RightButton))) {
+                    toggleMenuOpened()
                     return
                 }
 
-                Qt.callLater(noteInputModel.handleAction, item.codeRole)
+                if (mouse.button === Qt.LeftButton) {
+                    handleAction()
+                }
             }
 
             onPressAndHold: {
-                if (menuLoader.isMenuOpened() || !hasSubitems) {
+                if (menuLoader.isMenuOpened || !hasMenu) {
                     return
                 }
 
-                menuLoader.toggleOpened(item.subitemsRole, btn.navigation)
+                toggleMenuOpened()
             }
 
             Canvas {
+                visible: Boolean(btn.item) && btn.item.isMenuSecondary
 
-                visible: item.showSubitemsByPressAndHoldRole
+                property color fillColor: ui.theme.fontPrimaryColor
+                onFillColorChanged: {
+                    requestPaint()
+                }
 
                 width: 4
                 height: 4
@@ -130,7 +159,7 @@ Rectangle {
 
                 onPaint: {
                     const ctx = getContext("2d");
-                    ctx.fillStyle = ui.theme.fontPrimaryColor;
+                    ctx.fillStyle = fillColor;
                     ctx.moveTo(width, 0);
                     ctx.lineTo(width, height);
                     ctx.lineTo(0, height);
@@ -141,7 +170,9 @@ Rectangle {
 
             StyledMenuLoader {
                 id: menuLoader
-                onHandleAction: noteInputModel.handleAction(actionCode, actionIndex)
+                onHandleAction: function(actionCode) {
+                    noteInputModel.handleAction(actionCode)
+                }
             }
         }
     }

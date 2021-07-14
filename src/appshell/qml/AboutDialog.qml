@@ -26,112 +26,114 @@ import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
 import MuseScore.AppShell 1.0
 
-QmlDialog {
+StyledDialogView {
     id: root
-
-    fixedSize: Qt.size(480, 424)
 
     title: qsTrc("appshell", "About MuseScore")
 
-    Rectangle {
-        anchors.fill: parent
-        color: ui.theme.backgroundPrimaryColor
+    contentHeight: 424
+    contentWidth: 480
 
-        AboutModel {
-            id: aboutModel
-        }
+    AboutModel {
+        id: aboutModel
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: 30
 
         ColumnLayout {
-            anchors.fill: parent
-            spacing: 30
+            id: content
 
-            ColumnLayout {
-                id: content
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.topMargin: 36
+            Layout.leftMargin: 40
+            Layout.rightMargin: 40
 
+            spacing: 32
+
+            Image {
+                id: logo
+                Layout.alignment: Qt.AlignHCenter
+
+                source: "qrc:/qml/resources/mu_logo.svg"
+                sourceSize: Qt.size(100, 100)
+            }
+
+            Column {
+                spacing: 8
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.topMargin: 36
-                Layout.leftMargin: 40
-                Layout.rightMargin: 40
 
-                spacing: 32
-
-                Image {
-                    id: logo
-                    Layout.alignment: Qt.AlignHCenter
-
-                    source: "qrc:/qml/resources/mu_logo.svg"
-                    sourceSize: Qt.size(100, 100)
+                StyledTextLabel {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: qsTrc("appshell", "Version: ") + aboutModel.museScoreVersion()
+                    font: ui.theme.bodyBoldFont
                 }
 
-                Column {
-                    spacing: 8
-                    Layout.fillWidth: true
+                Row {
+                    spacing: 4
+                    anchors.horizontalCenter: parent.horizontalCenter
 
                     StyledTextLabel {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: qsTrc("appshell", "Version: ") + aboutModel.museScoreVersion()
-                        font: ui.theme.bodyBoldFont
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: qsTrc("appshell", "Revision: ") + aboutModel.museScoreRevision()
                     }
 
-                    Row {
-                        spacing: 4
-                        anchors.horizontalCenter: parent.horizontalCenter
+                    FlatButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: IconCode.COPY
 
-                        StyledTextLabel {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: qsTrc("appshell", "Revision: ") + aboutModel.museScoreRevision()
-                        }
-
-                        FlatButton {
-                            anchors.verticalCenter: parent.verticalCenter
-                            icon: IconCode.COPY
-
-                            onClicked: {
-                                aboutModel.copyRevisionToClipboard()
-                            }
+                        onClicked: {
+                            aboutModel.copyRevisionToClipboard()
                         }
                     }
-                }
-
-                StyledTextLabel {
-                    Layout.fillWidth: true
-                    text: {
-                        var message = qsTrc("appshell", "Visit <a href='%1'>%2</a> for new versions and more information.<br>Support MuseScore with your <a href='%3'>%4</a>.")
-                        var museScoreUrl = aboutModel.museScoreUrl()
-                        var museScoreContributionUrl = aboutModel.museScoreContributionUrl()
-                        return message
-                        .arg(museScoreUrl.url)
-                        .arg(museScoreUrl.displayName)
-                        .arg(museScoreContributionUrl.url)
-                        .arg(museScoreContributionUrl.displayName)
-                    }
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 3
-                }
-
-                StyledTextLabel {
-                    Layout.fillWidth: true
-                    text: qsTrc("appshell", "Copyright © 1999-2021 MuseScore BVBA and others.\nPublished under the GNU General Public License.")
-                    enabled: false
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 3
                 }
             }
 
-            RowLayout {
-                Layout.alignment: Qt.AlignRight
-                Layout.rightMargin: 16
-                Layout.bottomMargin: 16
+            StyledTextLabel {
+                Layout.fillWidth: true
+                text: {
+                    var message = qsTrc("appshell", "Visit %1 for new versions and more information.\nGet %2 with the program or %3 to its development.")
+                    var museScoreUrl = aboutModel.museScoreUrl()
+                    var museScoreForumUrl = aboutModel.museScoreForumUrl()
+                    var museScoreContributionUrl = aboutModel.museScoreContributionUrl()
+                    return message
+                    .arg("<a href='" + museScoreUrl.url + "'>" + museScoreUrl.displayName + "</a>")
+                    .arg("<a href='" + museScoreForumUrl.url + "'>" + museScoreForumUrl.displayName + "</a>")
+                    .arg("<a href='" + museScoreContributionUrl.url + "'>" + museScoreContributionUrl.displayName + "</a>")
+                    .replace("\n", "<br>")
+                }
+                wrapMode: Text.WordWrap
+                maximumLineCount: 3
+            }
 
-                spacing: 12
+            StyledTextLabel {
+                Layout.fillWidth: true
+                text: {
+                    var message = qsTrc("appshell", "Copyright © 1999-2021 MuseScore BVBA and others.\nPublished under the %1GNU General Public License version 3%2.")
+                    return message
+                    .arg("<a href='https://www.gnu.org/licenses/gpl-3.0.html'>")
+                    .arg("</a>")
+                    .replace("\n", "<br>")
+                }
+                wrapMode: Text.WordWrap
+                maximumLineCount: 3
+            }
+        }
 
-                FlatButton {
-                    text: qsTrc("global", "OK")
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            Layout.rightMargin: 16
+            Layout.bottomMargin: 16
 
-                    onClicked: {
-                        root.hide()
-                    }
+            spacing: 12
+
+            FlatButton {
+                text: qsTrc("global", "OK")
+
+                onClicked: {
+                    root.hide()
                 }
             }
         }

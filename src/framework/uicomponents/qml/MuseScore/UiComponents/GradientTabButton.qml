@@ -19,7 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.9
+import QtQuick 2.15
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.0
 import QtGraphicalEffects 1.0
@@ -46,15 +46,16 @@ RadioDelegate {
     leftPadding: 0
     rightPadding: 0
 
-    onToggled: {
-        if (!keynavCtrl.active) {
-            keynavCtrl.forceActive()
-        }
-    }
+    //! NONE Disabled default Qt Accessible
+    Accessible.role: Accessible.NoRole
 
     NavigationControl {
         id: keynavCtrl
         name: root.objectName
+
+        accessible.role: MUAccessible.RadioButton
+        accessible.name: root.title
+        accessible.selected: root.checked
 
         onActiveChanged: {
             if (keynavCtrl.active) {
@@ -71,6 +72,7 @@ RadioDelegate {
         Rectangle {
             id: backgroundRect
             anchors.fill: parent
+            anchors.bottomMargin: 2
 
             color: ui.theme.backgroundPrimaryColor
             opacity: ui.theme.buttonOpacityNormal
@@ -85,7 +87,7 @@ RadioDelegate {
             anchors.fill: parent
             anchors.margins: 2 //! NOTE margin needed to show focus border
 
-            property bool isVertical: orientation === Qt.Vertical
+            readonly property bool isVertical: root.orientation === Qt.Vertical
             visible: false
 
             LinearGradient {
@@ -93,13 +95,17 @@ RadioDelegate {
                 anchors.fill: parent
 
                 start: Qt.point(0, 0)
-                end: backgroundGradientRect.isVertical ? Qt.point(0, root.width) : Qt.point(root.width, 0)
+                end: backgroundGradientRect.isVertical ? Qt.point(0, root.height) : Qt.point(root.width, 0)
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: "transparent" }
-                    GradientStop { position: 1.0; color: Qt.rgba(ui.theme.accentColor.r,
-                                                                 ui.theme.accentColor.g,
-                                                                 ui.theme.accentColor.b,
-                                                                 backgroundGradientRect.isVertical ? 0.2 : 0.1) }
+                    GradientStop {
+                        position: 0.0
+                        color: "transparent"
+                    }
+                    GradientStop {
+                        position: 1.0
+                        color: Utils.colorWithAlpha(ui.theme.accentColor,
+                                                    backgroundGradientRect.isVertical ? 0.2 : 0.1)
+                    }
                 }
             }
 
@@ -154,8 +160,8 @@ RadioDelegate {
         Loader {
             anchors.verticalCenter: parent.verticalCenter
 
-            sourceComponent: iconComponent
-            visible: Boolean(iconComponent)
+            sourceComponent: root.iconComponent
+            visible: Boolean(root.iconComponent)
         }
 
         StyledTextLabel {
@@ -164,11 +170,11 @@ RadioDelegate {
             anchors.verticalCenter: parent.verticalCenter
             width: implicitWidth
 
-            visible: Boolean(title)
+            visible: Boolean(root.title)
 
             horizontalAlignment: Text.AlignLeft
-            font: normalStateFont
-            text: title
+            font: root.normalStateFont
+            text: root.title
         }
     }
 

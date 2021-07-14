@@ -54,9 +54,6 @@
 #include "types/tremolobartypes.h"
 #include "types/tremolotypes.h"
 
-#include "iinspectoradapter.h"
-#include "internal/compatibility/mu4inspectoradapter.h"
-
 using namespace mu::inspector;
 
 static void inspector_init_qrc()
@@ -67,13 +64,6 @@ static void inspector_init_qrc()
 std::string InspectorModule::moduleName() const
 {
     return "inspector";
-}
-
-void InspectorModule::registerExports()
-{
-    static std::shared_ptr<MU4InspectorAdapter> adapter = std::make_shared<MU4InspectorAdapter>();
-
-    mu::framework::ioc()->registerExport<mu::inspector::IInspectorAdapter>(moduleName(), adapter);
 }
 
 void InspectorModule::registerResources()
@@ -111,5 +101,5 @@ void InspectorModule::registerUiTypes()
     qmlRegisterUncreatableType<TremoloBarTypes>("MuseScore.Inspector", 1, 0, "TremoloBarTypes", "Not creatable as it is an enum type");
     qmlRegisterUncreatableType<TremoloTypes>("MuseScore.Inspector", 1, 0, "TremoloTypes", "Not creatable as it is an enum type");
 
-    framework::ioc()->resolve<ui::IUiEngine>(moduleName())->addSourceImportPath(inspector_QML_IMPORT);
+    modularity::ioc()->resolve<ui::IUiEngine>(moduleName())->addSourceImportPath(inspector_QML_IMPORT);
 }

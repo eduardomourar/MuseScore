@@ -32,6 +32,7 @@
 #include "tie.h"
 
 #include "libmscore/musescoreCore.h"
+#include "engraving/scoreaccess.h"
 
 #include <QQmlEngine>
 
@@ -188,7 +189,7 @@ Score* PluginAPI::newScore(const QString& name, const QString& part, int measure
     if (msc()->currentScore()) {
         msc()->currentScore()->endCmd();
     }
-    MasterScore* score = new MasterScore(MScore::defaultStyle());
+    MasterScore* score = mu::engraving::ScoreAccess::createMasterScore(MScore::defaultStyle());
     score->setName(name);
     score->appendPart(Score::instrTemplateFromName(part));
     score->appendMeasures(measures);
@@ -373,6 +374,17 @@ void PluginAPI::registerQmlTypes()
     qRegisterMetaType<FractionWrapper*>("FractionWrapper*");
 
     qmlTypesRegistered = true;
+}
+
+MuseScoreCore* PluginAPI::msc() const
+{
+    static MuseScoreCore mscStatic;
+    if (this->context() && this->context()->currentNotation()) {
+        mscStatic.setCurrentScore(this->context()->currentNotation()->elements()->msScore());
+    } else {
+        mscStatic.setCurrentScore(0);
+    }
+    return &mscStatic;
 }
 }
 }

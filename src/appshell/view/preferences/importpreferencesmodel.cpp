@@ -58,7 +58,7 @@ QVariantList ImportPreferencesModel::shortestNotes() const
         QVariantMap { { "title", qtrc("appshell", "Quarter") }, { "value", division() } },
         QVariantMap { { "title", qtrc("appshell", "Eighth") }, { "value", division() / 2 } },
         QVariantMap { { "title", qtrc("appshell", "16th") }, { "value", division() / 4 } },
-        QVariantMap { { "title", qtrc("appshell", "32th") }, { "value", division() / 8 } },
+        QVariantMap { { "title", qtrc("appshell", "32nd") }, { "value", division() / 8 } },
         QVariantMap { { "title", qtrc("appshell", "64th") }, { "value", division() / 16 } },
         QVariantMap { { "title", qtrc("appshell", "128th") }, { "value", division() / 32 } },
         QVariantMap { { "title", qtrc("appshell", "256h") }, { "value", division() / 64 } },
@@ -116,7 +116,7 @@ bool ImportPreferencesModel::needUseDefaultFont() const
 
 int ImportPreferencesModel::currentShortestNote() const
 {
-    return midiImportConfiguration()->midiShortestNote();
+    return midiImportExportConfiguration()->midiShortestNote();
 }
 
 bool ImportPreferencesModel::needAskAboutApplyingNewStyle() const
@@ -190,7 +190,7 @@ void ImportPreferencesModel::setCurrentShortestNote(int note)
         return;
     }
 
-    midiImportConfiguration()->setMidiShortestNote(note);
+    midiImportExportConfiguration()->setMidiShortestNote(note);
     emit currentShortestNoteChanged(note);
 }
 

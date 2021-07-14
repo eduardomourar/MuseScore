@@ -27,31 +27,35 @@ import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
 
 ListItemBlank {
-
     id: root
 
     property var modelData
-
-    property int iconAndCheckMarkMode: StyledMenuItem.ShowOne
-    property bool reserveSpaceForShortcutOrSubmenuIndicator: prv.hasShortcut || prv.hasSubMenu
-
-    signal handleAction(string actionCode, int actionIndex)
-
-    signal subMenuShowed()
-    signal subMenuClosed()
-
-    hoveredStateColor: ui.theme.accentColor
-    pressedStateColor: ui.theme.accentColor
-    enabled: (Boolean(modelData) && modelData.enabled !== undefined ) ? Boolean(modelData.enabled) : true // default true
-
-    isSelected: Boolean(prv.showedSubMenu) || (prv.hasIcon && prv.isSelectable && prv.isSelected)
-
 
     enum IconAndCheckMarkMode {
         None,
         ShowOne,
         ShowBoth
     }
+
+    property int iconAndCheckMarkMode: StyledMenuItem.ShowOne
+    property bool reserveSpaceForShortcutOrSubmenuIndicator: prv.hasShortcut || prv.hasSubMenu
+
+    property int padding: 0
+
+    signal handleAction(string actionCode, int actionIndex)
+
+    signal subMenuShowed()
+    signal subMenuClosed()
+
+    signal requestParentItemActive()
+
+    implicitHeight: 32
+
+    hoveredStateColor: ui.theme.accentColor
+    pressedStateColor: ui.theme.accentColor
+    enabled: (Boolean(modelData) && modelData.enabled !== undefined) ? Boolean(modelData.enabled) : true // default true
+
+    isSelected: Boolean(prv.showedSubMenu) || (prv.isSelectable && prv.isSelected)
 
     navigation.onActiveChanged: {
         if (prv.hasSubMenu) {
@@ -77,11 +81,8 @@ ListItemBlank {
             }
             break;
         case NavigationEvent.Left:
-            //! NOTE Go to parent item if present
-            if (navigation.panel.parentControl) {
-                event.accepted = true
-                root.navigation.panel.parentControl.forceActive()
-            }
+            //! NOTE Go to parent item
+            root.requestParentItemActive()
         }
     }
 
@@ -113,7 +114,7 @@ ListItemBlank {
             menu.x = root.width
             menu.y = 0
 
-            menu.navigation.parentControl = root.navigation
+            menu.navigationParentControl = root.navigation
             menu.navigation.name = root.navigation.name+"SubMenu"
 
             menu.model = modelData.subitems
@@ -143,16 +144,57 @@ ListItemBlank {
         }
     }
 
+    function calculatedLeftPartWidth() {
+        let result = 0
+
+        result += rowLayout.anchors.leftMargin
+        if (primaryIconLabel.visible) {
+            result += Math.ceil(primaryIconLabel.width)
+            result += rowLayout.spacing
+        }
+
+        if (secondaryIconLabel.visible) {
+            result += Math.ceil(secondaryIconLabel.width)
+            result += rowLayout.spacing
+        }
+
+        result += Math.ceil(titleLabel.implicitWidth)
+        result += rowLayout.spacing // Should theoretically not be necessary, but in practice it is
+
+        return result
+    }
+
+    function calculatedRightPartWidth() {
+        let result = 0
+
+        if (shortcutLabel.visible) {
+            result += rowLayout.spacing
+            result += Math.ceil(shortcutLabel.width)
+        }
+
+        if (submenuIndicator.visible) {
+            result += rowLayout.spacing
+            result += Math.ceil(submenuIndicator.width)
+        }
+
+        result += rowLayout.anchors.rightMargin
+
+        return result
+    }
+
     RowLayout {
+        id: rowLayout
+
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
-        anchors.leftMargin: root.iconAndCheckMarkMode === StyledMenuItem.None ? 24 : 12
+        anchors.leftMargin: 12
         anchors.right: parent.right
-        anchors.rightMargin: 18
+        anchors.rightMargin: submenuIndicator.visible ? 6 : 12
 
         spacing: 12
 
         StyledIconLabel {
+            id: primaryIconLabel
             Layout.alignment: Qt.AlignLeft
             width: 16
             iconCode: {
@@ -170,6 +212,7 @@ ListItemBlank {
         }
 
         StyledIconLabel {
+            id: secondaryIconLabel
             Layout.alignment: Qt.AlignLeft
             width: 16
             iconCode: prv.hasIcon ? modelData.icon : IconCode.NONE
@@ -177,6 +220,7 @@ ListItemBlank {
         }
 
         StyledTextLabel {
+            id: titleLabel
             Layout.fillWidth: true
             text: Boolean(modelData) && Boolean(modelData.title) ? modelData.title : ""
             horizontalAlignment: Text.AlignLeft
@@ -200,8 +244,8 @@ ListItemBlank {
     }
 
     onHovered: {
-        if (isHovered && !root.navigation.active) {
-            root.navigation.forceActive()
+        if (isHovered) {
+            root.navigation.requestActive()
         }
 
         if (!prv.hasSubMenu) {
@@ -211,12 +255,15 @@ ListItemBlank {
         if (isHovered) {
             prv.showSubMenu()
         } else {
-            var mouseOnShowedSubMenu = mapToItem(prv.showedSubMenu.contentItem, mouseX, mouseY)
+            var mouseGlogalPos = mapToGlobal(Qt.point(mouseX, mouseY))
+            var showedSubMenuGlobalPos = prv.showedSubMenu.contentItem.mapToGlobal(0, 0)
+
             var eps = 8
-            var subMenuWidth = prv.showedSubMenu.x + prv.showedSubMenu.width
-            var subMenuHeight = prv.showedSubMenu.y + prv.showedSubMenu.height
-            var isHoveredOnShowedSubMenu = (0 < mouseOnShowedSubMenu.x + eps && mouseOnShowedSubMenu.x - eps < subMenuWidth)
-                    && (0 < mouseOnShowedSubMenu.y + eps && mouseOnShowedSubMenu.y - eps < subMenuHeight)
+            var subMenuWidth = prv.showedSubMenu.width
+            var subMenuHeight = prv.showedSubMenu.height
+
+            var isHoveredOnShowedSubMenu = (showedSubMenuGlobalPos.x < mouseGlogalPos.x + eps && mouseGlogalPos.x - eps < showedSubMenuGlobalPos.x + subMenuWidth)
+                    && (showedSubMenuGlobalPos.y < mouseGlogalPos.y + eps && mouseGlogalPos.y - eps < showedSubMenuGlobalPos.y + subMenuHeight)
 
             if (isHoveredOnShowedSubMenu) {
                 return

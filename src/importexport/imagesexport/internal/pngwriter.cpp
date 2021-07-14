@@ -23,24 +23,31 @@
 #include "pngwriter.h"
 
 #include <cmath>
-
-#include "log.h"
+#include <QImage>
 
 #include "libmscore/score.h"
 #include "libmscore/page.h"
 
-#include "libmscore/draw/qpainterprovider.h"
+#include "engraving/draw/qpainterprovider.h"
 
-#include <QImage>
+#include "log.h"
 
 using namespace mu::iex::imagesexport;
-using namespace mu::system;
+using namespace mu::project;
+using namespace mu::notation;
+using namespace mu::io;
 
-mu::Ret PngWriter::write(const notation::INotationPtr notation, IODevice& destinationDevice, const Options& options)
+std::vector<INotationWriter::UnitType> PngWriter::supportedUnitTypes() const
+{
+    return { UnitType::PER_PAGE };
+}
+
+mu::Ret PngWriter::write(INotationPtr notation, Device& destinationDevice, const Options& options)
 {
     IF_ASSERT_FAILED(notation) {
         return make_ret(Ret::Code::UnknownError);
     }
+
     Ms::Score* score = notation->elements()->msScore();
     IF_ASSERT_FAILED(score) {
         return make_ret(Ret::Code::UnknownError);
@@ -59,12 +66,12 @@ mu::Ret PngWriter::write(const notation::INotationPtr notation, IODevice& destin
 
     Ms::Page* page = pages[PAGE_NUMBER];
 
-    const int TRIM_MARGIN_SIZE = options.value(OptionKey::TRIM_MARGINS_SIZE, Val(0)).toInt();
-    QRectF pageRect = page->abbox();
+    const int TRIM_MARGIN_SIZE = configuration()->trimMarginPixelSize();
+    RectF pageRect = page->abbox();
 
     if (TRIM_MARGIN_SIZE >= 0) {
         QMarginsF margins(TRIM_MARGIN_SIZE, TRIM_MARGIN_SIZE, TRIM_MARGIN_SIZE, TRIM_MARGIN_SIZE);
-        pageRect = page->tbbox() + margins;
+        pageRect = page->tbbox().toQRectF() + margins;
     }
 
     const float CANVAS_DPI = configuration()->exportPngDpiResolution();

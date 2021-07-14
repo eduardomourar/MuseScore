@@ -25,6 +25,19 @@
 
 #include <QObject>
 
+#ifdef WARNING
+#undef WARNING
+#endif
+#ifdef INFO
+#undef INFO
+#endif
+#ifdef ERROR
+#undef ERROR
+#endif
+#ifdef QUESTION
+#undef QUESTION
+#endif
+
 #ifdef FILE_OPEN
 #undef FILE_OPEN
 #endif
@@ -207,6 +220,7 @@ public:
         MULTIMEASURE_REST = 0xF355,
         IMPORT = 0xF357,
         UPDATE = 0xF358,
+        OPEN_LINK = 0xF359,
         GUITAR_TREMOLO_BAR = 0xF35C,
         SHORTCUTS = 0xF35D,
 
@@ -223,7 +237,7 @@ public:
         NOTE_QUARTER = 0xF368,
         NOTE_8TH = 0xF369,
         NOTE_16TH = 0xF36A,
-        NOTE_32TH = 0xF36B,
+        NOTE_32ND = 0xF36B,
         NOTE_64TH = 0xF36C,
         NOTE_128TH = 0xF36D,
         NOTE_256TH = 0xF36E,
@@ -282,13 +296,23 @@ public:
 
         PAGE = 0xF3A5,
 
+        CAMERA = 0xF3AE,
+
         CONTINUOUS_VIEW_VERTICAL = 0xF3AF,
 
         PAN_SCORE = 0xF3B0,
         COUNT_IN = 0xF3B1,
+
+        PRINT = 0xF3B7,
+
         LOOP_IN = 0xF3C7,
         LOOP_OUT = 0xF3C8,
         PAUSE = 0xF3C9,
+
+        WARNING = 0xF3CE,
+        INFO = 0xF3CF,
+        ERROR = 0xF3D0,
+        QUESTION = 0xF3D1,
 
         AUTO,
         NONE,

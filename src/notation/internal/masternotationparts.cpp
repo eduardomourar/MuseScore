@@ -45,10 +45,17 @@ void MasterNotationParts::apply()
     partsChanged().notify();
 }
 
-void MasterNotationParts::setInstruments(const instruments::InstrumentList& instruments)
+void MasterNotationParts::setParts(const PartInstrumentList& instruments)
 {
     startEdit();
-    NotationParts::setInstruments(instruments);
+    NotationParts::setParts(instruments);
+    apply();
+}
+
+void MasterNotationParts::setScoreOrder(const ScoreOrder& order)
+{
+    startEdit();
+    NotationParts::setScoreOrder(order);
     apply();
 }
 
@@ -91,7 +98,7 @@ void MasterNotationParts::setPartSharpFlat(const ID& partId, const SharpFlat& sh
     apply();
 }
 
-void MasterNotationParts::setPartTransposition(const ID& partId, const instruments::Interval& transpose)
+void MasterNotationParts::setPartTransposition(const ID& partId, const Interval& transpose)
 {
     startEdit();
 
@@ -175,10 +182,6 @@ void MasterNotationParts::removeParts(const IDList& partsIds)
 
     NotationParts::removeParts(partsIds);
 
-    for (INotationPartsPtr parts : excerptsParts()) {
-        parts->removeParts(partsIds);
-    }
-
     apply();
 }
 
@@ -214,10 +217,6 @@ void MasterNotationParts::moveParts(const IDList& sourcePartsIds, const ID& dest
 
     NotationParts::moveParts(sourcePartsIds, destinationPartId, mode);
 
-    for (INotationPartsPtr parts : excerptsParts()) {
-        parts->moveParts(sourcePartsIds, destinationPartId, mode);
-    }
-
     apply();
 }
 
@@ -248,7 +247,7 @@ void MasterNotationParts::moveStaves(const IDList& sourceStavesIds, const ID& de
     apply();
 }
 
-void MasterNotationParts::appendDoublingInstrument(const instruments::Instrument& instrument, const ID& destinationPartId)
+void MasterNotationParts::appendDoublingInstrument(const Instrument& instrument, const ID& destinationPartId)
 {
     startEdit();
 
@@ -287,7 +286,7 @@ void MasterNotationParts::cloneStaff(const ID& sourceStaffId, const ID& destinat
     apply();
 }
 
-void MasterNotationParts::replaceInstrument(const ID& instrumentId, const ID& fromPartId, const instruments::Instrument& newInstrument)
+void MasterNotationParts::replaceInstrument(const ID& instrumentId, const ID& fromPartId, const Instrument& newInstrument)
 {
     startEdit();
 

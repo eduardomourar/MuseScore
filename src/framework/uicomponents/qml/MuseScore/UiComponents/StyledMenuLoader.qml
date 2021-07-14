@@ -28,12 +28,11 @@ Loader {
     signal handleAction(string actionCode, int actionIndex)
 
     property alias menu: loader.item
+    property var menuAnchorItem: null
 
-    function isMenuOpened() {
-        return loader.menu && loader.menu.isOpened
-    }
+    property bool isMenuOpened: Boolean(loader.menu) && loader.menu.isOpened
 
-    function toggleOpened(model, navigationParentControl) {
+    function toggleOpened(model, navigationParentControl, x = 0, y = 0) {
         if (!loader.sourceComponent) {
             loader.sourceComponent = itemMenuComp
         }
@@ -46,10 +45,20 @@ Loader {
 
         menu.parent = loader.parent
         if (navigationParentControl) {
-            menu.navigation.parentControl = navigationParentControl
-            menu.navigation.name = navigationParentControl.name+"PopupMenu"
+            menu.navigationParentControl = navigationParentControl
+            menu.navigation.name = navigationParentControl.name + "PopupMenu"
         }
+        menu.anchorItem = menuAnchorItem
         menu.model = model
+
+        if (x !== 0) {
+            menu.x = x
+        }
+
+        if (y !== 0) {
+            menu.y = y
+        }
+
         menu.open()
 
         if (!menu.focusOnSelected()) {
@@ -57,13 +66,22 @@ Loader {
         }
     }
 
+    function unloadMenu() {
+        loader.sourceComponent = null
+    }
+
     Component {
         id: itemMenuComp
         StyledMenu {
             id: itemMenu
+
             onHandleAction: {
                 Qt.callLater(loader.handleAction, actionCode, actionIndex)
                 itemMenu.close()
+            }
+
+            onClosed: {
+                Qt.callLater(loader.unloadMenu)
             }
         }
     }

@@ -28,9 +28,21 @@
 #include "musicxml/exportxml.h"
 
 using namespace mu::iex::musicxml;
-using namespace mu::system;
+using namespace mu::project;
+using namespace mu::io;
 
-mu::Ret MusicXmlWriter::write(const notation::INotationPtr notation, IODevice& destinationDevice, const Options&)
+std::vector<INotationWriter::UnitType> MusicXmlWriter::supportedUnitTypes() const
+{
+    return { UnitType::PER_PART };
+}
+
+bool MusicXmlWriter::supportsUnitType(UnitType unitType) const
+{
+    std::vector<UnitType> unitTypes = supportedUnitTypes();
+    return std::find(unitTypes.cbegin(), unitTypes.cend(), unitType) != unitTypes.cend();
+}
+
+mu::Ret MusicXmlWriter::write(notation::INotationPtr notation, Device& destinationDevice, const Options&)
 {
     IF_ASSERT_FAILED(notation) {
         return make_ret(Ret::Code::UnknownError);
@@ -39,5 +51,24 @@ mu::Ret MusicXmlWriter::write(const notation::INotationPtr notation, IODevice& d
     IF_ASSERT_FAILED(score) {
         return make_ret(Ret::Code::UnknownError);
     }
+
     return Ms::saveXml(score, &destinationDevice);
+}
+
+mu::Ret MusicXmlWriter::writeList(const notation::INotationPtrList&, io::Device&, const Options&)
+{
+    NOT_SUPPORTED;
+    return Ret(Ret::Code::NotSupported);
+}
+
+void MusicXmlWriter::abort()
+{
+    NOT_IMPLEMENTED;
+}
+
+mu::framework::ProgressChannel MusicXmlWriter::progress() const
+{
+    NOT_IMPLEMENTED;
+    static framework::ProgressChannel prog;
+    return prog;
 }

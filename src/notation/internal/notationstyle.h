@@ -27,8 +27,7 @@
 
 #include "igetscore.h"
 
-namespace mu {
-namespace notation {
+namespace mu::notation {
 class NotationStyle : public INotationStyle
 {
 public:
@@ -37,6 +36,7 @@ public:
     QVariant styleValue(const StyleId& styleId) const override;
     QVariant defaultStyleValue(const StyleId& styleId) const override;
     void setStyleValue(const StyleId& styleId, const QVariant& newValue) override;
+    void resetStyleValue(const StyleId& styleId) override;
 
     bool canApplyToAllParts() const override;
     void applyToAllParts() override;
@@ -47,7 +47,6 @@ private:
     IGetScore* m_getScore = nullptr;
     async::Notification m_styleChanged;
 };
-}
 }
 
 #endif // MU_NOTATION_NOTATIONSTYLE_H

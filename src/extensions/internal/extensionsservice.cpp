@@ -35,10 +35,19 @@ using namespace mu::extensions;
 using namespace mu::framework;
 using namespace mu::network;
 
-static const QString ANALYSING_STATUS = qtrc("extensions", "Analysing...");
-static const QString DOWNLOADING_STATUS = qtrc("extensions", "Downloading...");
+namespace mu::extensions {
+QString analysingStatusTitle()
+{
+    return qtrc("extensions", "Analysing...");
+}
 
-void ExtensionsService::init()
+QString downloadingStatusTitle()
+{
+    return qtrc("extensions", "Downloading...");
+}
+}
+
+void ExtensionsService::refreshExtensions()
 {
     if (configuration()->needCheckForUpdate()) {
         QtConcurrent::run(this, &ExtensionsService::th_refreshExtensions);
@@ -258,9 +267,9 @@ RetVal<QString> ExtensionsService::downloadExtension(const QString& extensionCod
     QBuffer buff;
     INetworkManagerPtr networkManagerPtr = networkManagerCreator()->makeNetworkManager();
 
-    async::Channel<Progress> downloadChannel = networkManagerPtr->progressChannel();
+    ProgressChannel downloadChannel = networkManagerPtr->progressChannel();
     downloadChannel.onReceive(new deto::async::Asyncable(), [&progressChannel](const Progress& progress) {
-        progressChannel->send(ExtensionProgress(DOWNLOADING_STATUS, progress.current,
+        progressChannel->send(ExtensionProgress(downloadingStatusTitle(), progress.current,
                                                 progress.total));
     });
 
@@ -362,7 +371,7 @@ void ExtensionsService::th_install(const QString& extensionCode,
                                    async::Channel<ExtensionProgress>* progressChannel,
                                    async::Channel<Ret>* finishChannel)
 {
-    progressChannel->send(ExtensionProgress(ANALYSING_STATUS, true));
+    progressChannel->send(ExtensionProgress(analysingStatusTitle(), true));
 
     RetVal<QString> download = downloadExtension(extensionCode, progressChannel);
     if (!download.ret) {
@@ -370,11 +379,11 @@ void ExtensionsService::th_install(const QString& extensionCode,
         return;
     }
 
-    progressChannel->send(ExtensionProgress(ANALYSING_STATUS, true));
+    progressChannel->send(ExtensionProgress(analysingStatusTitle(), true));
 
     QString extensionArchivePath = download.val;
 
-    Ret unpack = extensionUnpacker()->unpack(extensionArchivePath, configuration()->extensionsPath().val.toQString());
+    Ret unpack = extensionUnpacker()->unpack(extensionArchivePath, configuration()->userExtensionsPath().toQString());
     if (!unpack) {
         LOGE() << "Error unpack" << unpack.toString();
         fileSystem()->remove(extensionArchivePath);
@@ -391,14 +400,14 @@ void ExtensionsService::th_install(const QString& extensionCode,
 void ExtensionsService::th_update(const QString& extensionCode, async::Channel<ExtensionProgress>* progressChannel,
                                   async::Channel<Ret>* finishChannel)
 {
-    progressChannel->send(ExtensionProgress(ANALYSING_STATUS, true));
+    progressChannel->send(ExtensionProgress(analysingStatusTitle(), true));
 
     RetVal<QString> download = downloadExtension(extensionCode, progressChannel);
     if (!download.ret) {
         finishChannel->send(download.ret);
     }
 
-    progressChannel->send(ExtensionProgress(ANALYSING_STATUS, true));
+    progressChannel->send(ExtensionProgress(analysingStatusTitle(), true));
 
     QString extensionArchivePath = download.val;
 
@@ -407,7 +416,7 @@ void ExtensionsService::th_update(const QString& extensionCode, async::Channel<E
         finishChannel->send(remove);
     }
 
-    Ret unpack = extensionUnpacker()->unpack(extensionArchivePath, configuration()->extensionsPath().val.toQString());
+    Ret unpack = extensionUnpacker()->unpack(extensionArchivePath, configuration()->userExtensionsPath().toQString());
     if (!unpack) {
         LOGE() << "Error unpack" << unpack.toString();
         finishChannel->send(unpack);

@@ -45,16 +45,23 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/internal/appshellconfiguration.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/notationpagestate.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/notationpagestate.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/framelesswindowcontroller.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/framelesswindowcontroller.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/istartupscenario.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/startupscenario.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/startupscenario.h
     ${CMAKE_CURRENT_LIST_DIR}/view/devtools/settingslistmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/devtools/settingslistmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/appmenumodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/appmenumodel.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/mainwindowtitleprovider.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/mainwindowtitleprovider.h
     ${CMAKE_CURRENT_LIST_DIR}/view/notationpagemodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/notationpagemodel.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/notationstatusbarmodel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/notationstatusbarmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/aboutmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/aboutmodel.h
-    ${CMAKE_CURRENT_LIST_DIR}/view/startupmodel.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/view/startupmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/preferencesmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/preferencesmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/preferencepageitem.cpp
@@ -83,19 +90,27 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/iopreferencesmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/commonaudioapiconfigurationmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/preferences/commonaudioapiconfigurationmodel.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/framelesswindow/framelesswindowmodel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/framelesswindow/framelesswindowmodel.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/publish/publishtoolbarmodel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/publish/publishtoolbarmodel.h
     ${DOCKWINDOW_SRC}
     )
+
 
 set(MODULE_LINK
     uicomponents
     ui
+    ${DOCK_LIBS}
     )
 
-if (KDAB_DOCKWIDGETS)
-    set(MODULE_LINK
-        ${MODULE_LINK}
-        kddockwidgets
-        )
-endif(KDAB_DOCKWIDGETS)
+if (OS_IS_WIN)
+    set(MODULE_SRC ${MODULE_SRC}
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/win/winframelesswindowcontroller.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/win/winframelesswindowcontroller.h
+    )
+
+    set(MODULE_LINK ${MODULE_LINK} dwmapi)
+endif(OS_IS_WIN)
 
 include(${PROJECT_SOURCE_DIR}/build/module.cmake)

@@ -19,9 +19,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.9
-import MuseScore.Inspector 1.0
+import QtQuick 2.15
 import MuseScore.UiComponents 1.0
+import MuseScore.Inspector 1.0
 import "../../../common"
 
 ExpandableBlank {
@@ -46,12 +46,22 @@ ExpandableBlank {
             anchors.right: parent.horizontalCenter
             anchors.rightMargin: 2
 
+            navigation.name: "Velocity change Menu"
+            navigation.panel: root.navigation.panel
+            navigation.column: root.navigation.column
+            navigation.row: root.navigation.row + 1
+
             titleText: qsTrc("inspector", "Velocity change")
             propertyItem: model ? model.velocityChange : null
 
             IncrementalPropertyControl {
                 id: velocityChangeControl
                 iconMode: iconModeEnum.hidden
+
+                navigation.name: "Velocity change Value"
+                navigation.panel: root.navigation.panel
+                navigation.column: root.navigation.column
+                navigation.row: root.navigation.row + 2
 
                 step: 1
                 decimals: 0
@@ -71,13 +81,23 @@ ExpandableBlank {
 
         InspectorPropertyView {
             titleText: qsTrc("inspector", "Changes in dynamics range")
+
+            navigation.name: "Changes in dynamics range Menu"
+            navigation.panel: root.navigation.panel
+            navigation.column: root.navigation.column
+            navigation.row: root.navigation.row + 3
+
             propertyItem: root.model ? root.model.velocityChangeType : null
 
-            StyledComboBox {
+            Dropdown {
+                id: dranges
+
                 width: parent.width
 
-                textRoleName: "text"
-                valueRoleName: "value"
+                navigation.name: "Changes in dynamics range Value"
+                navigation.panel: root.navigation.panel
+                navigation.column: root.navigation.column
+                navigation.row: root.navigation.row + 4
 
                 model: [
                     { text: qsTrc("inspector", "Linear (default)"), value: Hairpin.VELOCITY_EASING_LINEAR },
@@ -87,10 +107,10 @@ ExpandableBlank {
                     { text: qsTrc("inspector", "Ease-in and out"), value: Hairpin.VELOCITY_EASING_IN_OUT }
                 ]
 
-                currentIndex: root.model && !root.model.velocityChangeType.isUndefined ? indexOfValue(root.model.velocityChangeType.value) : -1
+                currentIndex: root.model && !root.model.velocityChangeType.isUndefined ? dranges.indexOfValue(root.model.velocityChangeType.value) : -1
 
-                onValueChanged: {
-                    root.model.velocityChangeType.value = value
+                onCurrentValueChanged: {
+                    root.model.velocityChangeType.value = dranges.currentValue
                 }
             }
         }

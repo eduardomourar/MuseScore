@@ -49,26 +49,28 @@ PopupPanel {
 
     visible: false
 
+    accessible.name: root.title
+
     QtObject {
-        id: privateProperties
+        id: prv
 
         property var currentOperationButton: undefined
     }
 
     function setProgress(status, indeterminate, current, total) {
-        if (!Boolean(privateProperties.currentOperationButton)) {
+        if (!Boolean(prv.currentOperationButton)) {
             return
         }
 
-        privateProperties.currentOperationButton.setProgress(status, indeterminate, current, total)
+        prv.currentOperationButton.setProgress(status, indeterminate, current, total)
     }
 
     function resetProgress() {
-        if (!Boolean(privateProperties.currentOperationButton)) {
+        if (!Boolean(prv.currentOperationButton)) {
             return
         }
 
-        privateProperties.currentOperationButton.resetProgress()
+        prv.currentOperationButton.resetProgress()
     }
 
     content: Column {
@@ -79,6 +81,21 @@ PopupPanel {
         anchors.bottomMargin: 42
 
         spacing: 42
+
+        property bool opened: root.visible
+        onOpenedChanged: {
+            if (opened) {
+                focusOnOpened()
+            }
+        }
+
+        function focusOnOpened() {
+            if (updateButton.visible) {
+                updateButton.navigation.requestActive()
+            } else {
+                installButton.navigation.requestActive()
+            }
+        }
 
         Column {
             width: 585
@@ -148,10 +165,15 @@ PopupPanel {
             FlatButton {
                 id: openFullDescriptionButton
                 Layout.alignment: Qt.AlignLeft
+
+                navigation.name: "openFullDescription"
+                navigation.panel: root.navigation
+                navigation.column: 1
+
                 text: Boolean(root.neutralButtonTitle) ? root.neutralButtonTitle : ""
 
                 onClicked: {
-                    privateProperties.currentOperationButton = undefined
+                    prv.currentOperationButton = undefined
                     root.neutralButtonClicked()
                 }
             }
@@ -166,10 +188,14 @@ PopupPanel {
 
                     visible: root.hasUpdate
 
+                    navigation.name: "Update"
+                    navigation.panel: root.navigation
+                    navigation.column: 2
+
                     text: qsTrc("uicomponents", "Update available")
 
                     onClicked: {
-                        privateProperties.currentOperationButton = updateButton
+                        prv.currentOperationButton = updateButton
                         root.updateRequested()
                     }
                 }
@@ -177,10 +203,14 @@ PopupPanel {
                 FlatButton {
                     visible: root.installed || root.hasUpdate
 
+                    navigation.name: "Restart"
+                    navigation.panel: root.navigation
+                    navigation.column: 3
+
                     text: qsTrc("uicomponents", "Restart")
 
                     onClicked: {
-                        privateProperties.currentOperationButton = undefined
+                        prv.currentOperationButton = undefined
                         root.restartRequested()
                     }
                 }
@@ -190,10 +220,14 @@ PopupPanel {
 
                     visible: !root.installed && !root.hasUpdate
 
+                    navigation.name: "Install"
+                    navigation.panel: root.navigation
+                    navigation.column: 4
+
                     text: qsTrc("uicomponents", "Install")
 
                     onClicked: {
-                        privateProperties.currentOperationButton = installButton
+                        prv.currentOperationButton = installButton
                         root.installRequested()
                     }
                 }
@@ -203,10 +237,14 @@ PopupPanel {
 
                     visible: root.installed || root.hasUpdate
 
+                    navigation.name: "Uninstall"
+                    navigation.panel: root.navigation
+                    navigation.column: 5
+
                     text: qsTrc("uicomponents", "Uninstall")
 
                     onClicked: {
-                        privateProperties.currentOperationButton = undefined
+                        prv.currentOperationButton = undefined
                         root.uninstallRequested()
                     }
                 }

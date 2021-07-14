@@ -27,10 +27,13 @@
 #include "log.h"
 
 #include "libmscore/score.h"
+#include "libmscore/scorefont.h"
 #include "libmscore/page.h"
 #include "libmscore/rendermidi.h"
+#include "engraving/accessibility/accessibleelement.h"
 
 #include "notationinteraction.h"
+#include "notationmidievents.h"
 #include "notationplayback.h"
 #include "notationundostack.h"
 #include "notationstyle.h"
@@ -38,6 +41,9 @@
 #include "notationaccessibility.h"
 #include "notationmidiinput.h"
 #include "notationparts.h"
+#include "notationtypes.h"
+#include "scoreorderconverter.h"
+#include "draw/pen.h"
 
 using namespace mu::notation;
 
@@ -85,10 +91,11 @@ Notation::Notation(Ms::Score* score)
 
     m_undoStack = std::make_shared<NotationUndoStack>(this, m_notationChanged);
     m_interaction = std::make_shared<NotationInteraction>(this, m_undoStack);
-    m_playback = std::make_shared<NotationPlayback>(this, m_notationChanged);
     m_midiInput = std::make_shared<NotationMidiInput>(this, m_undoStack);
     m_accessibility = std::make_shared<NotationAccessibility>(this, m_interaction->selectionChanged());
     m_parts = std::make_shared<NotationParts>(this, m_interaction, m_undoStack);
+    m_midiEventsProvider = std::make_shared<NotationMidiEvents>(this, m_notationChanged);
+    m_playback = std::make_shared<NotationPlayback>(this, m_notationChanged, m_midiEventsProvider);
     m_style = std::make_shared<NotationStyle>(this);
     m_elements = std::make_shared<NotationElements>(this);
 
@@ -136,34 +143,32 @@ Notation::Notation(Ms::Score* score)
 
 Notation::~Notation()
 {
+    //! Note Dereference internal pointers before the deallocation of Ms::Score* in order to prevent access to dereferenced object
+    //! Makes sense to use std::shared_ptr<Ms::Score*> ubiquitous instead of the raw pointers
+    m_parts = nullptr;
+    m_playback = nullptr;
+    m_undoStack = nullptr;
+    m_interaction = nullptr;
+    m_midiInput = nullptr;
+    m_accessibility = nullptr;
+    m_parts = nullptr;
+    m_midiEventsProvider = nullptr;
+    m_playback = nullptr;
+    m_style = nullptr;
+    m_elements = nullptr;
+
     delete m_score;
 }
 
 void Notation::init()
 {
-    Ms::MScore::init(); // initialize libmscore
-
-    Ms::MScore::setNudgeStep(0.1); // cursor key (default 0.1)
-    Ms::MScore::setNudgeStep10(1.0); // Ctrl + cursor key (default 1.0)
-    Ms::MScore::setNudgeStep50(0.01); // Alt  + cursor key (default 0.01)
+    Ms::MScore::pixelRatio = Ms::DPI / QGuiApplication::primaryScreen()->logicalDotsPerInch();
 
     bool isVertical = configuration()->canvasOrientation().val == framework::Orientation::Vertical;
     Ms::MScore::setVerticalOrientation(isVertical);
 
-    Ms::MScore::pixelRatio = Ms::DPI / QGuiApplication::primaryScreen()->logicalDotsPerInch();
-
     Ms::MScore::panPlayback = configuration()->isAutomaticallyPanEnabled();
     Ms::MScore::playRepeats = configuration()->isPlayRepeatsEnabled();
-
-    Ms::gscore = new Ms::MasterScore();
-    Ms::gscore->setPaletteMode(true);
-    Ms::gscore->setMovements(new Ms::Movements());
-    Ms::gscore->setStyle(Ms::MScore::baseStyle());
-
-    Ms::gscore->style().set(Ms::Sid::MusicalTextFont, QString("Leland Text"));
-    Ms::ScoreFont* scoreFont = Ms::ScoreFont::fontFactory("Leland");
-    Ms::gscore->setScoreFont(scoreFont);
-    Ms::gscore->setNoteHeadWidth(scoreFont->width(Ms::SymId::noteheadBlack, Ms::gscore->spatium()) / Ms::SPATIUM20);
 
     for (int i = 0; i < VOICES; ++i) {
         Ms::MScore::selectColor[i] = configuration()->selectionColor(i);
@@ -179,7 +184,7 @@ void Notation::setScore(Ms::Score* score)
 
     if (score) {
         static_cast<NotationInteraction*>(m_interaction.get())->init();
-        static_cast<NotationPlayback*>(m_playback.get())->init();
+        static_cast<NotationPlayback*>(m_playback.get())->init(m_parts);
     }
 }
 
@@ -239,6 +244,11 @@ void Notation::setMetaInfo(const Meta& meta)
     score()->setMetaTags(tags);
 }
 
+mu::notation::ScoreOrder Notation::scoreOrder() const
+{
+    return m_score ? ScoreOrderConverter::convertScoreOrder(m_score->scoreOrder()) : ScoreOrder();
+}
+
 INotationPtr Notation::clone() const
 {
     return std::make_shared<Notation>(score()->clone());
@@ -269,7 +279,7 @@ ViewMode Notation::viewMode() const
     return score()->layoutMode();
 }
 
-void Notation::paint(mu::draw::Painter* painter, const QRectF& frameRect)
+void Notation::paint(mu::draw::Painter* painter, const RectF& frameRect)
 {
     const QList<Ms::Page*>& pages = score()->pages();
     if (pages.empty()) {
@@ -293,10 +303,10 @@ void Notation::paint(mu::draw::Painter* painter, const QRectF& frameRect)
     static_cast<NotationInteraction*>(m_interaction.get())->paint(painter);
 }
 
-void Notation::paintPages(draw::Painter* painter, const QRectF& frameRect, const QList<Ms::Page*>& pages, bool paintBorders) const
+void Notation::paintPages(draw::Painter* painter, const RectF& frameRect, const QList<Ms::Page*>& pages, bool paintBorders) const
 {
     for (Ms::Page* page : pages) {
-        QRectF pageRect(page->abbox().translated(page->pos()));
+        RectF pageRect(page->abbox().translated(page->pos()));
 
         if (pageRect.right() < frameRect.left()) {
             continue;
@@ -310,30 +320,34 @@ void Notation::paintPages(draw::Painter* painter, const QRectF& frameRect, const
             paintPageBorder(painter, page);
         }
 
-        QPointF pagePosition(page->pos());
+        PointF pagePosition(page->pos());
         painter->translate(pagePosition);
         paintForeground(painter, page->bbox());
+        painter->setClipping(true);
+        painter->setClipRect(page->bbox());
 
         QList<Element*> elements = page->items(frameRect.translated(-page->pos()));
         Ms::paintElements(*painter, elements);
 
         painter->translate(-pagePosition);
+        painter->setClipping(false);
     }
 }
 
 void Notation::paintPageBorder(draw::Painter* painter, const Ms::Page* page) const
 {
-    QRectF boundingRect(page->canvasBoundingRect());
+    using namespace mu::draw;
+    RectF boundingRect(page->canvasBoundingRect());
 
-    painter->setBrush(Qt::NoBrush);
-    painter->setPen(QPen(configuration()->borderColor(), configuration()->borderWidth()));
+    painter->setBrush(BrushStyle::NoBrush);
+    painter->setPen(Pen(configuration()->borderColor(), configuration()->borderWidth()));
     painter->drawRect(boundingRect);
 
     if (!score()->showPageborders()) {
         return;
     }
 
-    painter->setBrush(Qt::NoBrush);
+    painter->setBrush(BrushStyle::NoBrush);
     painter->setPen(Ms::MScore::frameMarginColor);
     boundingRect.adjust(page->lm(), page->tm(), -page->rm(), -page->bm());
     painter->drawRect(boundingRect);
@@ -343,7 +357,7 @@ void Notation::paintPageBorder(draw::Painter* painter, const Ms::Page* page) con
     }
 }
 
-void Notation::paintForeground(mu::draw::Painter* painter, const QRectF& pageRect) const
+void Notation::paintForeground(mu::draw::Painter* painter, const RectF& pageRect) const
 {
     if (score()->printing()) {
         painter->fillRect(pageRect, Qt::white);

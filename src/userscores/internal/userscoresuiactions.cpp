@@ -47,8 +47,9 @@ const UiActionList UserScoresUiActions::m_actions = {
              ),
     UiAction("file-save-online",
              mu::context::UiCtxNotationOpened,
-             QT_TRANSLATE_NOOP("action", "Save Online..."),
-             QT_TRANSLATE_NOOP("action", "Save score on musescore.com")
+             QT_TRANSLATE_NOOP("action", "Upload to MuseScore.com"),
+             QT_TRANSLATE_NOOP("action", "Save score on MuseScore.com"),
+             IconCode::Code::CLOUD_FILE
              ),
     UiAction("file-save-as",
              mu::context::UiCtxNotationOpened,
@@ -61,16 +62,17 @@ const UiActionList UserScoresUiActions::m_actions = {
              QT_TRANSLATE_NOOP("action", "Save a copy of the score in addition to the current file")
              ),
     UiAction("file-save-selection",
-             mu::context::UiCtxNotationHasSelection,
+             mu::context::UiCtxNotationFocused,
              QT_TRANSLATE_NOOP("action", "Save Selection..."),
              QT_TRANSLATE_NOOP("action", "Save current selection as new score")
              ),
     UiAction("file-export",
              mu::context::UiCtxNotationOpened,
-             QT_TRANSLATE_NOOP("action", "Export..."),
-             QT_TRANSLATE_NOOP("action", "Save a copy of the score in various formats")
+             QT_TRANSLATE_NOOP("action", "Export"),
+             QT_TRANSLATE_NOOP("action", "Save a copy of the score in various formats"),
+             IconCode::Code::SHARE_FILE
              ),
-    UiAction("file-import",
+    UiAction("file-import-pdf",
              mu::context::UiCtxAny,
              QT_TRANSLATE_NOOP("action", "Import PDF..."),
              QT_TRANSLATE_NOOP("action", "Import a PDF file with an experimental service on musescore.com")

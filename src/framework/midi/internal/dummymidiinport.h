@@ -28,6 +28,9 @@ namespace mu::midi {
 class DummyMidiInPort : public IMidiInPort
 {
 public:
+
+    void init();
+
     std::vector<MidiDevice> devices() const override;
 
     Ret connect(const MidiDeviceID& deviceID) override;
@@ -38,13 +41,13 @@ public:
     Ret run() override;
     void stop() override;
     bool isRunning() const override;
-    async::Channel<std::pair<tick_t, Event> > eventReceived() const override;
+    async::Channel<tick_t, Event> eventReceived() const override;
 
 private:
 
     MidiDeviceID m_deviceID;
     bool m_running = false;
-    async::Channel<std::pair<tick_t, Event> > m_eventReceived;
+    async::Channel<tick_t, Event> m_eventReceived;
 };
 }
 

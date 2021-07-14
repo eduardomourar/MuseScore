@@ -27,13 +27,12 @@ import MuseScore.Ui 1.0
 import "../../common"
 import "../notes/internal"
 
-StyledPopup {
+StyledPopupView {
     id: root
 
     property QtObject model: null
 
-    implicitHeight: contentColumn.implicitHeight + topPadding + bottomPadding
-    width: parent.width
+    contentHeight: contentColumn.implicitHeight
 
     function tpcListModel() {
         return [
@@ -114,21 +113,19 @@ StyledPopup {
                     titleText: qsTrc("inspector", "Top TPC")
                     propertyItem: root.model ? root.model.topTpc : null
 
-                    StyledComboBox {
+                    Dropdown {
+                        id: ttpcs
                         anchors.left: parent.left
                         anchors.right: parent.horizontalCenter
                         anchors.rightMargin: 2
                         width: parent.width
 
-                        textRoleName: "text"
-                        valueRoleName: "value"
-
                         model: tpcListModel()
 
-                        currentIndex: root.model && !root.model.topTpc.isUndefined ? indexOfValue(root.model.topTpc.value) : -1
+                        currentIndex: root.model && !root.model.topTpc.isUndefined ? ttpcs.indexOfValue(root.model.topTpc.value) : -1
 
-                        onValueChanged: {
-                            root.model.topTpc.value = value
+                        onCurrentValueChanged: {
+                            root.model.topTpc.value = ttpcs.currentValue
                         }
                     }
                 }
@@ -166,21 +163,19 @@ StyledPopup {
                 height: childrenRect.height
                 width: parent.width
 
-                StyledComboBox {
+                Dropdown {
+                    id: tpcs
                     anchors.left: parent.left
                     anchors.right: parent.horizontalCenter
                     anchors.rightMargin: 2
                     width: parent.width
 
-                    textRoleName: "text"
-                    valueRoleName: "value"
-
                     model: tpcListModel()
 
-                    currentIndex: root.model && !root.model.bottomTpc.isUndefined ? indexOfValue(root.model.bottomTpc.value) : -1
+                    currentIndex: root.model && !root.model.bottomTpc.isUndefined ? tpcs.indexOfValue(root.model.bottomTpc.value) : -1
 
-                    onValueChanged: {
-                        root.model.bottomTpc.value = value
+                    onCurrentValueChanged: {
+                        root.model.bottomTpc.value = tpcs.currentValue
                     }
                 }
 

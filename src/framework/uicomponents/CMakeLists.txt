@@ -47,8 +47,15 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/qmllistproperty.h
     ${CMAKE_CURRENT_LIST_DIR}/view/popupview.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/popupview.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/ipopupwindow.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/popupwindow_qquickview.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/popupwindow/popupwindow_qquickview.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/dialogview.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/dialogview.h
     ${CMAKE_CURRENT_LIST_DIR}/view/filepickermodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/filepickermodel.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/widgets/radiobuttongroupbox.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/widgets/radiobuttongroupbox.h
     )
 
 include(${PROJECT_SOURCE_DIR}/build/module.cmake)

@@ -25,13 +25,12 @@ import MuseScore.Inspector 1.0
 import MuseScore.UiComponents 1.0
 import "../../common"
 
-StyledPopup {
+StyledPopupView {
     id: root
 
     property QtObject model: null
 
-    implicitHeight: contentColumn.implicitHeight + topPadding + bottomPadding
-    width: parent.width
+    contentHeight: contentColumn.implicitHeight
 
     Column {
         id: contentColumn
@@ -44,11 +43,10 @@ StyledPopup {
             titleText: qsTrc("inspector", "Bend type")
             propertyItem: root.model ? root.model.bendType : null
 
-            StyledComboBox {
-                width: parent.width
+            Dropdown {
+                id: btypes
 
-                textRoleName: "text"
-                valueRoleName: "value"
+                width: parent.width
 
                 model: [
                     { text: qsTrc("inspector", "Bend"), value: BendTypes.TYPE_BEND },
@@ -59,10 +57,10 @@ StyledPopup {
                     { text: qsTrc("inspector", "Custom"), value: BendTypes.TYPE_CUSTOM }
                 ]
 
-                currentIndex: root.model && !root.model.bendType.isUndefined ? indexOfValue(root.model.bendType.value) : -1
+                currentIndex: root.model && !root.model.bendType.isUndefined ? btypes.indexOfValue(root.model.bendType.value) : -1
 
-                onValueChanged: {
-                    root.model.bendType.value = value
+                onCurrentValueChanged: {
+                    root.model.bendType.value = btypes.currentValue
                 }
             }
         }

@@ -104,7 +104,7 @@ static Palette* toPalette(PalettePanel* pp)
 
 void populateIconPalette(Palette* p, const IconAction* a)
 {
-    auto adapter = mu::framework::ioc()->resolve<mu::palette::IPaletteAdapter>("palette");
+    auto adapter = mu::modularity::ioc()->resolve<mu::palette::IPaletteAdapter>("palette");
     while (a->subtype != IconType::NONE) {
         auto ik = makeElement<Icon>(Ms::gscore);
         ik->setIconType(a->subtype);
@@ -421,7 +421,7 @@ PaletteTree* PaletteCreator::newDefaultPaletteTree()
 
 static void populateIconPalettePanel(PalettePanel* p, const IconAction* a)
 {
-    auto adapter = mu::framework::ioc()->resolve<mu::palette::IPaletteAdapter>("palette");
+    auto adapter = mu::modularity::ioc()->resolve<mu::palette::IPaletteAdapter>("palette");
     while (a->subtype != IconType::NONE) {
         auto ik = makeElement<Icon>(gscore);
         ik->setIconType(a->subtype);
@@ -1099,11 +1099,15 @@ PalettePanel* PaletteCreator::newBracketsPalettePanel()
             { BracketType::LINE,   QT_TRANSLATE_NOOP("palette", "Line") } }
     };
 
-    for (auto type : types) {
+    static Staff bracketItemOwner(gscore);
+    bracketItemOwner.setBracketType(types.size() - 1, BracketType::NORMAL);
+
+    for (size_t i = 0; i < types.size(); ++i) {
         auto b1 = makeElement<Bracket>(gscore);
-        auto bi1 = makeElement<BracketItem>(gscore);
+        auto bi1 = bracketItemOwner.brackets()[i];
+        const auto& type = types[i];
         bi1->setBracketType(type.first);
-        b1->setBracketItem(bi1.get());
+        b1->setBracketItem(bi1);
         sp->append(b1, type.second); // Bracket, Brace, Square, Line
     }
     return sp;

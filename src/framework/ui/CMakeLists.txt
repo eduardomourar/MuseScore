@@ -78,6 +78,8 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/internal/navigationcontroller.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/navigationuiactions.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/navigationuiactions.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/uiarrangement.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/uiarrangement.h
     ${PLATFORM_THEME_SRC}
 
     ${CMAKE_CURRENT_LIST_DIR}/view/interactiveprovider.cpp
@@ -92,8 +94,6 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/qmltranslation.h
     ${CMAKE_CURRENT_LIST_DIR}/view/qmllauncher.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/qmllauncher.h
-    ${CMAKE_CURRENT_LIST_DIR}/view/qmldialog.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/view/qmldialog.h
     ${CMAKE_CURRENT_LIST_DIR}/view/qmltooltip.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/qmltooltip.h
     ${CMAKE_CURRENT_LIST_DIR}/view/widgetdialog.cpp
@@ -112,6 +112,8 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/navigationcontrol.h
     ${CMAKE_CURRENT_LIST_DIR}/view/navigationevent.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/navigationevent.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/qmlaccessible.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/qmlaccessible.h
 
     ${CMAKE_CURRENT_LIST_DIR}/dev/interactivetestsmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/dev/interactivetestsmodel.h
@@ -131,6 +133,10 @@ set(MODULE_SRC
 
 set(MODULE_UI
     ${CMAKE_CURRENT_LIST_DIR}/dev/testdialog.ui
+    )
+
+set(MODULE_LINK
+    accessibility
     )
 
 include(${PROJECT_SOURCE_DIR}/build/module.cmake)

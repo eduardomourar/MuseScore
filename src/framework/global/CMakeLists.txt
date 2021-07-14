@@ -38,13 +38,13 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/globalmodule.h
     ${CMAKE_CURRENT_LIST_DIR}/globaltypes.h
     ${CMAKE_CURRENT_LIST_DIR}/iapplication.h
-    ${CMAKE_CURRENT_LIST_DIR}/iworkspacesettings.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/application.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/application.h
     ${CMAKE_CURRENT_LIST_DIR}/iinteractive.h
     ${CMAKE_CURRENT_LIST_DIR}/iglobalconfiguration.h
     ${CMAKE_CURRENT_LIST_DIR}/io/path.cpp
     ${CMAKE_CURRENT_LIST_DIR}/io/path.h
+    ${CMAKE_CURRENT_LIST_DIR}/io/device.h
     ${CMAKE_CURRENT_LIST_DIR}/log.h
     ${CMAKE_CURRENT_LIST_DIR}/logstream.h
     ${CMAKE_CURRENT_LIST_DIR}/dataformatter.cpp
@@ -80,6 +80,8 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/xmlreader.h
     ${CMAKE_CURRENT_LIST_DIR}/xmlwriter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/xmlwriter.h
+    ${CMAKE_CURRENT_LIST_DIR}/utils.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/utils.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/globalconfiguration.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/globalconfiguration.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/interactive.cpp

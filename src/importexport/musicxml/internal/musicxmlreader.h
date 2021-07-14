@@ -22,14 +22,13 @@
 #ifndef MU_IMPORTEXPORT_MUSICXMLREADER_H
 #define MU_IMPORTEXPORT_MUSICXMLREADER_H
 
-#include "notation/inotationreader.h"
+#include "project/inotationreader.h"
 
 namespace mu::iex::musicxml {
-class MusicXmlReader : public notation::INotationReader
+class MusicXmlReader : public project::INotationReader
 {
 public:
-
-    Ret read(Ms::MasterScore* score, const io::path& path) override;
+    Ret read(Ms::MasterScore* score, const io::path& path, const Options& options = Options()) override;
 };
 }
 #endif // MU_IMPORTEXPORT_MUSICXMLREADER_H

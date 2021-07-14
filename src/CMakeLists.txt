@@ -26,7 +26,7 @@ add_subdirectory(main)
 add_subdirectory(framework)
 
 # Domain model
-add_subdirectory(libmscore)
+add_subdirectory(engraving)
 
 # AppShell
 add_subdirectory(appshell)
@@ -34,10 +34,15 @@ add_subdirectory(appshell)
 # Modules
 add_subdirectory(context)
 add_subdirectory(notation)
+add_subdirectory(project)
 
 if (BUILD_USERSCORES_MODULE)
     add_subdirectory(userscores)
 endif (BUILD_USERSCORES_MODULE)
+
+if (BUILD_LEARN_MODULE)
+    add_subdirectory(learn)
+endif (BUILD_LEARN_MODULE)
 
 add_subdirectory(converter)
 
@@ -48,7 +53,7 @@ endif (BUILD_WORKSPACE_MODULE)
 if (NOT OS_IS_WASM)
     add_subdirectory(importexport)
 
-    add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/beatroot beatroot) # for midiimport
+    add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/beatroot beatroot) # for midi import
     add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/rtf2html rtf2html) # for capella
 
     if (BUILD_CLOUD_MODULE)
@@ -78,12 +83,19 @@ endif (BUILD_PLAYBACK_MODULE)
 if (BUILD_PALETTE_MODULE)
     add_subdirectory(palette)
 endif (BUILD_PALETTE_MODULE)
-if (BUILD_INSTRUMENTS_MODULE)
-    add_subdirectory(instruments)
-endif (BUILD_INSTRUMENTS_MODULE)
+if (BUILD_INSTRUMENTSSCENE_MODULE)
+    add_subdirectory(instrumentsscene)
+endif (BUILD_INSTRUMENTSSCENE_MODULE)
 if (BUILD_INSPECTOR_MODULE)
     add_subdirectory(inspector)
 endif (BUILD_INSPECTOR_MODULE)
+
+# Other
+if (BUILD_MULTIINSTANCES_MODULE)
+    add_subdirectory(multiinstances)
+endif()
+
+add_subdirectory(diagnostics)
 
 if (BUILD_AUTOBOT_MODULE)
     add_subdirectory(autobot)
@@ -96,13 +108,14 @@ if (BUILD_UNIT_TESTS)
 #    add_subdirectory(notation/tests) no tests at moment
     add_subdirectory(userscores/tests)
 
-    add_subdirectory(libmscore/tests)
+    add_subdirectory(engraving/tests)
+    add_subdirectory(engraving/utests)
     add_subdirectory(importexport/bb/tests)
     add_subdirectory(importexport/braille/tests)
     add_subdirectory(importexport/bww/tests)
     add_subdirectory(importexport/capella/tests)
-    add_subdirectory(importexport/guitarpro/tests)
-    add_subdirectory(importexport/midiimport/tests)
+#    add_subdirectory(importexport/guitarpro/tests)
+    add_subdirectory(importexport/midi/tests)
     add_subdirectory(importexport/musicxml/tests)
 endif(BUILD_UNIT_TESTS)
 

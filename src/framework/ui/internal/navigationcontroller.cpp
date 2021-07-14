@@ -21,10 +21,12 @@
  */
 #include "navigationcontroller.h"
 
+#include <QCoreApplication>
 #include <algorithm>
 #include <limits>
 #include <utility>
 
+#include "async/async.h"
 #include "log.h"
 
 //#define NAVIGATION_LOGGING_ENABLED
@@ -46,6 +48,7 @@ using Event = INavigation::Event;
 template<class T>
 static T* findNearestEnabled(const std::set<T*>& set, const INavigation::Index& currentIndex, MoveDirection direction)
 {
+    TRACEFUNC;
     T* ret = nullptr;
     for (T* v : set) {
         if (!v->enabled()) {
@@ -240,6 +243,34 @@ static T* findActive(const std::set<T*>& set)
     return nullptr;
 }
 
+template<class T>
+static T* findByName(const std::set<T*>& set, const QString& name)
+{
+    auto it = std::find_if(set.cbegin(), set.cend(), [name](const T* s) {
+        return s->name() == name;
+    });
+
+    if (it != set.cend()) {
+        return *it;
+    }
+
+    return nullptr;
+}
+
+template<class T>
+static T* findByIndex(const std::set<T*>& set, const INavigation::Index& idx)
+{
+    auto it = std::find_if(set.cbegin(), set.cend(), [idx](const T* s) {
+        return s->index() == idx;
+    });
+
+    if (it != set.cend()) {
+        return *it;
+    }
+
+    return nullptr;
+}
+
 void NavigationController::init()
 {
     dispatcher()->reg(this, "nav-dev-show-controls", this, &NavigationController::devShowControls);
@@ -248,6 +279,9 @@ void NavigationController::init()
     dispatcher()->reg(this, "nav-prev-section", [this]() { goToPrevSection(false); });
     dispatcher()->reg(this, "nav-next-panel", this, &NavigationController::goToNextPanel);
     dispatcher()->reg(this, "nav-prev-panel", this, &NavigationController::goToPrevPanel);
+    //! NOTE Same as panel at the moment
+    dispatcher()->reg(this, "nav-next-tab", this, &NavigationController::goToNextPanel);
+    dispatcher()->reg(this, "nav-prev-tab", this, &NavigationController::goToPrevPanel);
 
     dispatcher()->reg(this, "nav-trigger-control", this, &NavigationController::doTriggerControl);
 
@@ -261,28 +295,40 @@ void NavigationController::init()
     dispatcher()->reg(this, "nav-last-control", this, &NavigationController::goToLastControl);           // typically End key
     dispatcher()->reg(this, "nav-nextrow-control", this, &NavigationController::goToNextRowControl);     // typically PageDown key
     dispatcher()->reg(this, "nav-prevrow-control", this, &NavigationController::goToPrevRowControl);     // typically PageUp key
+
+    qApp->installEventFilter(this);
 }
 
 void NavigationController::reg(INavigationSection* section)
 {
     //! TODO add check on valid state
-
+    TRACEFUNC;
     m_sections.insert(section);
 
-    section->forceActiveRequested().onReceive(this, [this](const SectionPanelControl& ssc) {
-        onForceActiveRequested(std::get<0>(ssc), std::get<1>(ssc), std::get<2>(ssc));
+    section->activeRequested().onReceive(this, [this](INavigationSection* section, INavigationPanel* panel, INavigationControl* control) {
+        onActiveRequested(section, panel, control);
     });
 }
 
 void NavigationController::unreg(INavigationSection* section)
 {
+    TRACEFUNC;
     m_sections.erase(section);
-    section->forceActiveRequested().resetOnReceive(this);
+    section->activeRequested().resetOnReceive(this);
 }
 
 const std::set<INavigationSection*>& NavigationController::sections() const
 {
     return m_sections;
+}
+
+bool NavigationController::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::MouseButtonPress) {
+        resetActive();
+    }
+
+    return QObject::eventFilter(watched, event);
 }
 
 void NavigationController::devShowControls()
@@ -292,24 +338,46 @@ void NavigationController::devShowControls()
     }
 }
 
-void NavigationController::doActivateSection(INavigationSection* s, bool isActivateLastPanel)
+void NavigationController::resetActive()
 {
-    IF_ASSERT_FAILED(s) {
+    MYLOG() << "===";
+    INavigationSection* activeSec = this->activeSection();
+    if (!activeSec) {
         return;
     }
 
-    for (INavigationPanel* sub : s->panels()) {
-        doDeactivatePanel(sub);
+    INavigationPanel* activePnl = findActive(activeSec->panels());
+    if (activePnl) {
+        INavigationControl* activeCtrl = findActive(activePnl->controls());
+        if (activeCtrl) {
+            activeCtrl->setActive(false);
+        }
+
+        activePnl->setActive(false);
     }
 
-    s->setActive(true);
-    MYLOG() << "activated section: " << s->name() << ", order: " << s->index().order();
+    activeSec->setActive(false);
+}
+
+void NavigationController::doActivateSection(INavigationSection* sect, bool isActivateLastPanel)
+{
+    TRACEFUNC;
+    IF_ASSERT_FAILED(sect) {
+        return;
+    }
+
+    for (INavigationPanel* panel : sect->panels()) {
+        doDeactivatePanel(panel);
+    }
+
+    sect->setActive(true);
+    MYLOG() << "activated section: " << sect->name() << ", order: " << sect->index().order();
 
     INavigationPanel* toActivatePanel = nullptr;
     if (isActivateLastPanel) {
-        toActivatePanel = lastEnabled(s->panels());
+        toActivatePanel = lastEnabled(sect->panels());
     } else {
-        toActivatePanel = firstEnabled(s->panels());
+        toActivatePanel = firstEnabled(sect->panels());
     }
 
     if (toActivatePanel) {
@@ -317,68 +385,103 @@ void NavigationController::doActivateSection(INavigationSection* s, bool isActiv
     }
 }
 
-void NavigationController::doDeactivateSection(INavigationSection* s)
+void NavigationController::doDeactivateSection(INavigationSection* sect)
 {
-    IF_ASSERT_FAILED(s) {
+    TRACEFUNC;
+    IF_ASSERT_FAILED(sect) {
         return;
     }
 
-    for (INavigationPanel* sub : s->panels()) {
-        doDeactivatePanel(sub);
+    for (INavigationPanel* panel : sect->panels()) {
+        doDeactivatePanel(panel);
     }
 
-    s->setActive(false);
+    sect->setActive(false);
 }
 
-void NavigationController::doActivatePanel(INavigationPanel* sub)
+void NavigationController::doActivatePanel(INavigationPanel* panel)
 {
-    IF_ASSERT_FAILED(sub) {
+    TRACEFUNC;
+    IF_ASSERT_FAILED(panel) {
         return;
     }
 
-    for (INavigationControl* ctr : sub->controls()) {
+    for (INavigationControl* ctrl : panel->controls()) {
+        doDeactivateControl(ctrl);
+    }
+
+    INavigation::EventPtr event = INavigation::Event::make(INavigation::Event::AboutActive);
+    panel->onEvent(event);
+
+    panel->setActive(true);
+    MYLOG() << "activated panel: " << panel->name() << ", order: " << panel->index().order();
+
+    INavigationControl* control = nullptr;
+    QString ctrlName = event->data.value("controlName").toString();
+    if (!ctrlName.isEmpty()) {
+        control = findByName(panel->controls(), ctrlName);
+        IF_ASSERT_FAILED(control) {
+        }
+    }
+
+    if (!control) {
+        QVariantList idxVal = event->data.value("controlIndex").toList();
+        if (idxVal.count() == 2) {
+            INavigation::Index ctrlIndex;
+            ctrlIndex.row = idxVal.at(0).toInt();
+            ctrlIndex.column = idxVal.at(1).toInt();
+            control = findByIndex(panel->controls(), ctrlIndex);
+            IF_ASSERT_FAILED(control) {
+            }
+        }
+    }
+
+    if (!control) {
+        control = firstEnabled(panel->controls());
+    }
+
+    if (control) {
+        doActivateControl(control);
+    }
+}
+
+void NavigationController::doDeactivatePanel(INavigationPanel* panel)
+{
+    TRACEFUNC;
+    IF_ASSERT_FAILED(panel) {
+        return;
+    }
+
+    for (INavigationControl* ctr : panel->controls()) {
         doDeactivateControl(ctr);
     }
 
-    sub->setActive(true);
-    MYLOG() << "activated subsection: " << sub->name() << ", order: " << sub->index().order();
-
-    INavigationControl* firstCtr = firstEnabled(sub->controls());
-    if (firstCtr) {
-        doActivateControl(firstCtr);
+    if (panel->active()) {
+        panel->setActive(false);
     }
 }
 
-void NavigationController::doDeactivatePanel(INavigationPanel* sub)
+void NavigationController::doActivateControl(INavigationControl* ctrl)
 {
-    IF_ASSERT_FAILED(sub) {
+    TRACEFUNC;
+    IF_ASSERT_FAILED(ctrl) {
         return;
     }
 
-    for (INavigationControl* ctr : sub->controls()) {
-        ctr->setActive(false);
-    }
-
-    sub->setActive(false);
+    ctrl->setActive(true);
+    MYLOG() << "activated control: " << ctrl->name() << ", row: " << ctrl->index().row << ", column: " << ctrl->index().column;
 }
 
-void NavigationController::doActivateControl(INavigationControl* c)
+void NavigationController::doDeactivateControl(INavigationControl* ctrl)
 {
-    IF_ASSERT_FAILED(c) {
+    TRACEFUNC;
+    IF_ASSERT_FAILED(ctrl) {
         return;
     }
 
-    c->setActive(true);
-    MYLOG() << "activated control: " << c->name() << ", row: " << c->index().row << ", column: " << c->index().column;
-}
-
-void NavigationController::doDeactivateControl(INavigationControl* c)
-{
-    IF_ASSERT_FAILED(c) {
-        return;
+    if (ctrl->active()) {
+        ctrl->setActive(false);
     }
-
-    c->setActive(false);
 }
 
 void NavigationController::doActivateFirst()
@@ -407,6 +510,7 @@ void NavigationController::doActivateLast()
 
 INavigationSection* NavigationController::activeSection() const
 {
+    TRACEFUNC;
     if (m_sections.empty()) {
         return nullptr;
     }
@@ -415,6 +519,7 @@ INavigationSection* NavigationController::activeSection() const
 
 INavigationPanel* NavigationController::activePanel() const
 {
+    TRACEFUNC;
     INavigationSection* activeSec = activeSection();
     if (!activeSec) {
         return nullptr;
@@ -424,15 +529,22 @@ INavigationPanel* NavigationController::activePanel() const
 
 INavigationControl* NavigationController::activeControl() const
 {
-    INavigationPanel* activeSub = activePanel();
-    if (!activeSub) {
+    TRACEFUNC;
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return nullptr;
     }
-    return findActive(activeSub->controls());
+    return findActive(activePanel->controls());
+}
+
+mu::async::Notification NavigationController::navigationChanged() const
+{
+    return m_navigationChanged;
 }
 
 void NavigationController::goToNextSection()
 {
+    TRACEFUNC;
     MYLOG() << "====";
     if (m_sections.empty()) {
         return;
@@ -452,10 +564,13 @@ void NavigationController::goToNextSection()
     }
 
     doActivateSection(nextSec);
+
+    m_navigationChanged.notify();
 }
 
 void NavigationController::goToPrevSection(bool isActivateLastPanel)
 {
+    TRACEFUNC;
     MYLOG() << "====";
     if (m_sections.empty()) {
         return;
@@ -475,14 +590,18 @@ void NavigationController::goToPrevSection(bool isActivateLastPanel)
     }
 
     doActivateSection(prevSec, isActivateLastPanel);
+
+    m_navigationChanged.notify();
 }
 
 void NavigationController::goToNextPanel()
 {
+    TRACEFUNC;
     MYLOG() << "====";
     INavigationSection* activeSec = activeSection();
     if (!activeSec) {
         doActivateFirst();
+        m_navigationChanged.notify();
         return;
     }
 
@@ -491,6 +610,7 @@ void NavigationController::goToNextPanel()
         INavigationPanel* first = firstEnabled(activeSec->panels());
         if (first) {
             doActivatePanel(first);
+            m_navigationChanged.notify();
         }
         return;
     }
@@ -500,6 +620,16 @@ void NavigationController::goToNextPanel()
     INavigationPanel* nextPanel = nextEnabled(activeSec->panels(), activePanel->index());
     if (nextPanel) {
         doActivatePanel(nextPanel);
+        m_navigationChanged.notify();
+        return;
+    }
+
+    if (activeSec->type() == INavigationSection::Type::Exclusive) {
+        INavigationPanel* first = firstEnabled(activeSec->panels());
+        if (first) {
+            doActivatePanel(first);
+            m_navigationChanged.notify();
+        }
         return;
     }
 
@@ -509,27 +639,40 @@ void NavigationController::goToNextPanel()
 
 void NavigationController::goToPrevPanel()
 {
+    TRACEFUNC;
     MYLOG() << "====";
     INavigationSection* activeSec = activeSection();
     if (!activeSec) {
         doActivateLast();
+        m_navigationChanged.notify();
         return;
     }
 
-    INavigationPanel* activeSubSec = findActive(activeSec->panels());
-    if (!activeSubSec) { // no any active
-        INavigationPanel* lastSub = lastEnabled(activeSec->panels());
-        if (lastSub) {
-            doActivatePanel(lastSub);
+    INavigationPanel* activePanel = findActive(activeSec->panels());
+    if (!activePanel) { // no any active
+        INavigationPanel* lastPanel = lastEnabled(activeSec->panels());
+        if (lastPanel) {
+            doActivatePanel(lastPanel);
+            m_navigationChanged.notify();
         }
         return;
     }
 
-    doDeactivatePanel(activeSubSec);
+    doDeactivatePanel(activePanel);
 
-    INavigationPanel* prevSubSec = prevEnabled(activeSec->panels(), activeSubSec->index());
-    if (prevSubSec) {
-        doActivatePanel(prevSubSec);
+    INavigationPanel* prevPanel = prevEnabled(activeSec->panels(), activePanel->index());
+    if (prevPanel) {
+        doActivatePanel(prevPanel);
+        m_navigationChanged.notify();
+        return;
+    }
+
+    if (activeSec->type() == INavigationSection::Type::Exclusive) {
+        INavigationPanel* lastPanel = lastEnabled(activeSec->panels());
+        if (lastPanel) {
+            doActivatePanel(lastPanel);
+            m_navigationChanged.notify();
+        }
         return;
     }
 
@@ -539,18 +682,19 @@ void NavigationController::goToPrevPanel()
 
 void NavigationController::onRight()
 {
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    TRACEFUNC;
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
     INavigation::EventPtr e = Event::make(Event::Right);
-    activeSubSec->onEvent(e);
+    activePanel->onEvent(e);
     if (e->accepted) {
         return;
     }
 
-    INavigationControl* activeCtrl = findActive(activeSubSec->controls());
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (activeCtrl) {
         activeCtrl->onEvent(e);
         if (e->accepted) {
@@ -558,34 +702,35 @@ void NavigationController::onRight()
         }
     }
 
-    INavigationPanel::Direction direction = activeSubSec->direction();
+    INavigationPanel::Direction direction = activePanel->direction();
     switch (direction) {
     case INavigationPanel::Direction::Horizontal: {
-        goToControl(MoveDirection::Right, activeSubSec);
+        goToControl(MoveDirection::Right, activePanel);
     } break;
     case INavigationPanel::Direction::Vertical: {
         // noop
     } break;
     case INavigationPanel::Direction::Both: {
-        goToControl(MoveDirection::Right, activeSubSec);
+        goToControl(MoveDirection::Right, activePanel);
     } break;
     }
 }
 
 void NavigationController::onLeft()
 {
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    TRACEFUNC;
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
     INavigation::EventPtr e = Event::make(Event::Left);
-    activeSubSec->onEvent(e);
+    activePanel->onEvent(e);
     if (e->accepted) {
         return;
     }
 
-    INavigationControl* activeCtrl = findActive(activeSubSec->controls());
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (activeCtrl) {
         activeCtrl->onEvent(e);
         if (e->accepted) {
@@ -593,34 +738,35 @@ void NavigationController::onLeft()
         }
     }
 
-    INavigationPanel::Direction direction = activeSubSec->direction();
+    INavigationPanel::Direction direction = activePanel->direction();
     switch (direction) {
     case INavigationPanel::Direction::Horizontal: {
-        goToControl(MoveDirection::Left, activeSubSec);
+        goToControl(MoveDirection::Left, activePanel);
     } break;
     case INavigationPanel::Direction::Vertical: {
         // noop
     } break;
     case INavigationPanel::Direction::Both: {
-        goToControl(MoveDirection::Left, activeSubSec);
+        goToControl(MoveDirection::Left, activePanel);
     } break;
     }
 }
 
 void NavigationController::onDown()
 {
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    TRACEFUNC;
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
     INavigation::EventPtr e = Event::make(Event::Down);
-    activeSubSec->onEvent(e);
+    activePanel->onEvent(e);
     if (e->accepted) {
         return;
     }
 
-    INavigationControl* activeCtrl = findActive(activeSubSec->controls());
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (activeCtrl) {
         activeCtrl->onEvent(e);
         if (e->accepted) {
@@ -628,34 +774,35 @@ void NavigationController::onDown()
         }
     }
 
-    INavigationPanel::Direction direction = activeSubSec->direction();
+    INavigationPanel::Direction direction = activePanel->direction();
     switch (direction) {
     case INavigationPanel::Direction::Horizontal: {
         // noop
     } break;
     case INavigationPanel::Direction::Vertical: {
-        goToControl(MoveDirection::Down, activeSubSec);
+        goToControl(MoveDirection::Down, activePanel);
     } break;
     case INavigationPanel::Direction::Both: {
-        goToControl(MoveDirection::Down, activeSubSec);
+        goToControl(MoveDirection::Down, activePanel);
     } break;
     }
 }
 
 void NavigationController::onUp()
 {
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    TRACEFUNC;
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
     INavigation::EventPtr e = Event::make(Event::Up);
-    activeSubSec->onEvent(e);
+    activePanel->onEvent(e);
     if (e->accepted) {
         return;
     }
 
-    INavigationControl* activeCtrl = findActive(activeSubSec->controls());
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (activeCtrl) {
         activeCtrl->onEvent(e);
         if (e->accepted) {
@@ -663,35 +810,46 @@ void NavigationController::onUp()
         }
     }
 
-    INavigationPanel::Direction direction = activeSubSec->direction();
+    INavigationPanel::Direction direction = activePanel->direction();
     switch (direction) {
     case INavigationPanel::Direction::Horizontal: {
         // noop
     } break;
     case INavigationPanel::Direction::Vertical: {
-        goToControl(MoveDirection::Up, activeSubSec);
+        goToControl(MoveDirection::Up, activePanel);
     } break;
     case INavigationPanel::Direction::Both: {
-        goToControl(MoveDirection::Up, activeSubSec);
+        goToControl(MoveDirection::Up, activePanel);
     } break;
     }
 }
 
 void NavigationController::onEscape()
 {
+    TRACEFUNC;
     MYLOG() << "====";
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    INavigationSection* activeSec = activeSection();
+    if (!activeSec) {
         return;
     }
 
     INavigation::EventPtr e = Event::make(Event::Escape);
-    activeSubSec->onEvent(e);
+    activeSec->onEvent(e);
     if (e->accepted) {
         return;
     }
 
-    INavigationControl* activeCtrl = findActive(activeSubSec->controls());
+    INavigationPanel* activePanel = findActive(activeSec->panels());
+    if (!activePanel) {
+        return;
+    }
+
+    activePanel->onEvent(e);
+    if (e->accepted) {
+        return;
+    }
+
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (activeCtrl) {
         activeCtrl->onEvent(e);
     }
@@ -711,13 +869,14 @@ void NavigationController::goToLastControl()
 
 void NavigationController::goToNextRowControl()
 {
+    TRACEFUNC;
     MYLOG() << "====";
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
-    INavigationControl* activeControl = findActive(activeSubSec->controls());
+    INavigationControl* activeControl = findActive(activePanel->controls());
     if (activeControl) {
         doDeactivateControl(activeControl);
     }
@@ -726,28 +885,31 @@ void NavigationController::goToNextRowControl()
     if (activeControl) {
         INavigation::Index index = activeControl->index();
         index.column = 0;
-        toControl = nextEnabled(activeSubSec->controls(), index, MoveDirection::Down);
+        toControl = nextEnabled(activePanel->controls(), index, MoveDirection::Down);
         if (!toControl) { // last row
-            toControl = firstEnabled(activeSubSec->controls());
+            toControl = firstEnabled(activePanel->controls());
         }
     } else {
-        toControl = firstEnabled(activeSubSec->controls());
+        toControl = firstEnabled(activePanel->controls());
     }
 
     if (toControl) {
         doActivateControl(toControl);
     }
+
+    m_navigationChanged.notify();
 }
 
 void NavigationController::goToPrevRowControl()
 {
+    TRACEFUNC;
     MYLOG() << "====";
-    INavigationPanel* activeSubSec = activePanel();
-    if (!activeSubSec) {
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
         return;
     }
 
-    INavigationControl* activeControl = findActive(activeSubSec->controls());
+    INavigationControl* activeControl = findActive(activePanel->controls());
     if (activeControl) {
         doDeactivateControl(activeControl);
     }
@@ -756,31 +918,34 @@ void NavigationController::goToPrevRowControl()
     if (activeControl) {
         INavigation::Index index = activeControl->index();
         index.column = 0;
-        toControl = prevEnabled(activeSubSec->controls(), index, MoveDirection::Up);
+        toControl = prevEnabled(activePanel->controls(), index, MoveDirection::Up);
         if (!toControl) { // first row
-            toControl = lastEnabled(activeSubSec->controls());
+            toControl = lastEnabled(activePanel->controls());
         }
     } else {
-        toControl = lastEnabled(activeSubSec->controls());
+        toControl = lastEnabled(activePanel->controls());
     }
 
     if (toControl) {
         doActivateControl(toControl);
     }
+
+    m_navigationChanged.notify();
 }
 
-void NavigationController::goToControl(MoveDirection direction, INavigationPanel* activeSubSec)
+void NavigationController::goToControl(MoveDirection direction, INavigationPanel* activePanel)
 {
+    TRACEFUNC;
     MYLOG() << "direction: " << direction;
-    if (!activeSubSec) {
-        activeSubSec = activePanel();
+    if (!activePanel) {
+        activePanel = this->activePanel();
     }
 
-    if (!activeSubSec) {
+    if (!activePanel) {
         return;
     }
 
-    INavigationControl* activeControl = findActive(activeSubSec->controls());
+    INavigationControl* activeControl = findActive(activePanel->controls());
     if (activeControl) {
         MYLOG() << "current activated control: " << activeControl->name()
                 << ", row: " << activeControl->index().row
@@ -793,56 +958,56 @@ void NavigationController::goToControl(MoveDirection direction, INavigationPanel
 
     switch (direction) {
     case MoveDirection::First: {
-        toControl = firstEnabled(activeSubSec->controls());
+        toControl = firstEnabled(activePanel->controls());
     } break;
     case MoveDirection::Last: {
-        toControl = lastEnabled(activeSubSec->controls());
+        toControl = lastEnabled(activePanel->controls());
     } break;
     case MoveDirection::Right: {
         if (!activeControl) { // no any active
-            toControl = firstEnabled(activeSubSec->controls(), INavigation::Index(), direction);
+            toControl = firstEnabled(activePanel->controls(), INavigation::Index(), direction);
         } else {
-            toControl = nextEnabled(activeSubSec->controls(), activeControl->index(), direction);
+            toControl = nextEnabled(activePanel->controls(), activeControl->index(), direction);
             if (!toControl) { // active is last
                 INavigation::Index index = activeControl->index();
                 index.column = -1;
-                toControl = firstEnabled(activeSubSec->controls(), index, direction); // the first to be the next
+                toControl = firstEnabled(activePanel->controls(), index, direction); // the first to be the next
             }
         }
     } break;
     case MoveDirection::Down: {
         if (!activeControl) { // no any active
-            toControl = firstEnabled(activeSubSec->controls(), INavigation::Index(), direction);
+            toControl = firstEnabled(activePanel->controls(), INavigation::Index(), direction);
         } else {
-            toControl = nextEnabled(activeSubSec->controls(), activeControl->index(), direction);
+            toControl = nextEnabled(activePanel->controls(), activeControl->index(), direction);
             if (!toControl) { // active is last
                 INavigation::Index index = activeControl->index();
                 index.row = -1;
-                toControl = firstEnabled(activeSubSec->controls(), index, direction); // the first to be the next
+                toControl = firstEnabled(activePanel->controls(), index, direction); // the first to be the next
             }
         }
     } break;
     case MoveDirection::Left: {
         if (!activeControl) { // no any active
-            toControl = lastEnabled(activeSubSec->controls(), INavigation::Index(), direction);
+            toControl = lastEnabled(activePanel->controls(), INavigation::Index(), direction);
         } else {
-            toControl = prevEnabled(activeSubSec->controls(), activeControl->index(), direction);
+            toControl = prevEnabled(activePanel->controls(), activeControl->index(), direction);
             if (!toControl) { // active is first
                 INavigation::Index index = activeControl->index();
                 index.column = std::numeric_limits<int>::max();
-                toControl = lastEnabled(activeSubSec->controls(), index, direction); // the last to be the next
+                toControl = lastEnabled(activePanel->controls(), index, direction); // the last to be the next
             }
         }
     } break;
     case MoveDirection::Up: {
         if (!activeControl) { // no any active
-            toControl = lastEnabled(activeSubSec->controls(), INavigation::Index(), direction);
+            toControl = lastEnabled(activePanel->controls(), INavigation::Index(), direction);
         } else {
-            toControl = prevEnabled(activeSubSec->controls(), activeControl->index(), direction);
+            toControl = prevEnabled(activePanel->controls(), activeControl->index(), direction);
             if (!toControl) { // active is first
                 INavigation::Index index = activeControl->index();
                 index.row = std::numeric_limits<int>::max();
-                toControl = lastEnabled(activeSubSec->controls(), index, direction); // the last to be the next
+                toControl = lastEnabled(activePanel->controls(), index, direction); // the last to be the next
             }
         }
     } break;
@@ -851,47 +1016,114 @@ void NavigationController::goToControl(MoveDirection direction, INavigationPanel
     if (toControl) {
         doActivateControl(toControl);
     }
+
+    m_navigationChanged.notify();
 }
 
 void NavigationController::doTriggerControl()
 {
+    TRACEFUNC;
     MYLOG() << "====";
-    INavigationControl* activeCtrl= activeControl();
+    INavigationPanel* activePanel = this->activePanel();
+    if (!activePanel) {
+        return;
+    }
+
+    INavigation::EventPtr e = Event::make(Event::Trigger);
+    activePanel->onEvent(e);
+    if (e->accepted) {
+        return;
+    }
+
+    INavigationControl* activeCtrl = findActive(activePanel->controls());
     if (!activeCtrl) {
         return;
     }
 
     MYLOG() << "triggered control: " << activeCtrl->name();
+    activeCtrl->onEvent(e);
+    if (e->accepted) {
+        return;
+    }
+
     activeCtrl->trigger();
 }
 
-void NavigationController::onForceActiveRequested(INavigationSection* sec, INavigationPanel* sub, INavigationControl* ctrl)
+bool NavigationController::requestActivateByName(const std::string& sectName, const std::string& panelName, const std::string& controlName)
 {
+    INavigationSection* section = findByName(m_sections, QString::fromStdString(sectName));
+    if (section) {
+        LOGE() << "not found section with name: " << sectName;
+        return false;
+    }
+
+    INavigationPanel* panel = findByName(section->panels(), QString::fromStdString(panelName));
+    if (!panel) {
+        LOGE() << "not found panel with name: " << panelName << ", section: " << sectName;
+        return false;
+    }
+
+    INavigationControl* control = findByName(panel->controls(), QString::fromStdString(controlName));
+    if (!panel) {
+        LOGE() << "not found control with name: " << controlName << ", panel: " << panelName << ", section: " << sectName;
+        return false;
+    }
+
+    onActiveRequested(section, panel, control);
+    return true;
+}
+
+void NavigationController::onActiveRequested(INavigationSection* sect, INavigationPanel* panel, INavigationControl* ctrl)
+{
+    TRACEFUNC;
+
     if (m_sections.empty()) {
         return;
     }
 
     INavigationSection* activeSec = findActive(m_sections);
-    if (activeSec && activeSec != sec) {
+
+    //! NOTE If there is no active section,
+    //! we may not be using keyboard navigation, so ignore the request.
+    if (!activeSec) {
+        return;
+    }
+
+    bool isChanged = false;
+
+    if (activeSec != sect) {
         doDeactivateSection(activeSec);
     }
 
-    sec->setActive(true);
-    MYLOG() << "activated section: " << sec->name() << ", order: " << sec->index().order();
-
-    INavigationPanel* activeSub = findActive(sec->panels());
-    if (activeSub && activeSub != sub) {
-        doDeactivatePanel(activeSub);
+    if (!sect->active()) {
+        sect->setActive(true);
+        isChanged = true;
+        MYLOG() << "activated section: " << sect->name() << ", order: " << sect->index().order();
     }
 
-    sub->setActive(true);
-    MYLOG() << "activated subsection: " << sub->name() << ", order: " << sub->index().order();
+    INavigationPanel* activePanel = findActive(sect->panels());
+    if (activePanel && activePanel != panel) {
+        doDeactivatePanel(activePanel);
+    }
 
-    INavigationControl* activeCtrl = findActive(sub->controls());
+    if (!panel->active()) {
+        panel->setActive(true);
+        isChanged = true;
+        MYLOG() << "activated panel: " << panel->name() << ", order: " << panel->index().order();
+    }
+
+    INavigationControl* activeCtrl = findActive(panel->controls());
     if (activeCtrl && activeCtrl != ctrl) {
         activeCtrl->setActive(false);
     }
 
-    ctrl->setActive(true);
-    MYLOG() << "activated control: " << ctrl->name() << ", row: " << ctrl->index().row << ", column: " << ctrl->index().column;
+    if (!ctrl->active()) {
+        ctrl->setActive(true);
+        isChanged = true;
+        MYLOG() << "activated control: " << ctrl->name() << ", row: " << ctrl->index().row << ", column: " << ctrl->index().column;
+    }
+
+    if (isChanged) {
+        m_navigationChanged.notify();
+    }
 }

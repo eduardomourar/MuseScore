@@ -21,8 +21,10 @@
  */
 
 #include "loopmarker.h"
+#include "draw/pen.h"
 
 using namespace mu::notation;
+using namespace mu;
 
 LoopMarker::LoopMarker(LoopBoundaryType type)
     : m_type(type)
@@ -46,11 +48,12 @@ void LoopMarker::setStyle(INotationStylePtr style)
 
 void LoopMarker::paint(mu::draw::Painter* painter)
 {
+    using namespace mu::draw;
     if (!m_visible || !m_style) {
         return;
     }
 
-    QPolygonF triangle(3);
+    PolygonF triangle(3);
 
     qreal x = m_rect.left();
     qreal y = m_rect.top();
@@ -61,21 +64,21 @@ void LoopMarker::paint(mu::draw::Painter* painter)
     switch (m_type) {
     case LoopBoundaryType::LoopIn: { // draw a right-pointing triangle
         qreal tx = x - 1.0;
-        triangle[0] = QPointF(tx, y);
-        triangle[1] = QPointF(tx, y + h);
-        triangle[2] = QPointF(tx + h, y + h / 2);
+        triangle[0] = PointF(tx, y);
+        triangle[1] = PointF(tx, y + h);
+        triangle[2] = PointF(tx + h, y + h / 2);
     }
     break;
     case LoopBoundaryType::LoopOut: { // draw a left-pointing triangle
-        triangle[0] = QPointF(x, y);
-        triangle[1] = QPointF(x, y + h);
-        triangle[2] = QPointF(x - h, y + h / 2);
+        triangle[0] = PointF(x, y);
+        triangle[1] = PointF(x, y + h);
+        triangle[2] = PointF(x - h, y + h / 2);
     }
     break;
     case LoopBoundaryType::Unknown: return;
     }
 
-    painter->setPen(QPen(color, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin));
+    painter->setPen(Pen(color, 2.0, PenStyle::SolidLine, PenCapStyle::FlatCap, PenJoinStyle::MiterJoin));
     painter->drawLine(x, y, x, m_rect.bottom());
     painter->setBrush(color);
     painter->drawConvexPolygon(triangle);

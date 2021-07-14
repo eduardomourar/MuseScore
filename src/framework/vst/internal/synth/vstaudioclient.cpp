@@ -82,6 +82,10 @@ void VstAudioClient::process(float* output, unsigned int samples)
 
 void VstAudioClient::setBlockSize(unsigned int samples)
 {
+    if (m_samplesInfo.samplesPerBlock == samples) {
+        return;
+    }
+
     m_samplesInfo.samplesPerBlock = samples;
 
     updateProcessSetup();
@@ -138,10 +142,12 @@ void VstAudioClient::updateProcessSetup()
 
 void VstAudioClient::fillOutputBuffer(unsigned int samples, float* output)
 {
+    int audioChannels = config()->audioChannelsCount();
+
     for (unsigned int i = 0; i < samples; ++i) {
-        for (unsigned int s = 0; s < audio::synth::AUDIO_CHANNELS; ++s) {
+        for (unsigned int s = 0; s < audioChannels; ++s) {
             auto getFromChannel = std::min<unsigned int>(s, m_processData.outputs[0].numChannels - 1);
-            output[i * audio::synth::AUDIO_CHANNELS + s] = m_processData.outputs[0].channelBuffers32[getFromChannel][i];
+            output[i * audioChannels + s] = m_processData.outputs[0].channelBuffers32[getFromChannel][i];
         }
     }
 }

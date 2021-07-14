@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <cmath>
+#include <QRegularExpression>
 
 #include "libmscore/score.h"
 #include "thirdparty/qzip/qzipreader_p.h"
@@ -426,9 +427,10 @@ void ChordObj::readCapx(XmlReader& e)
 
 static signed char pitchStr2Char(QString& strPitch)
 {
-    QRegExp pitchRegExp("[A-G][0-9]");
+    QRegularExpression pitchRegex(QRegularExpression::anchoredPattern("[A-G][0-9]"));
+    QRegularExpressionMatch match = pitchRegex.match(strPitch);
 
-    if (!pitchRegExp.exactMatch(strPitch)) {
+    if (!match.hasMatch()) {
         qDebug("pitchStr2Char: illegal pitch '%s'", qPrintable(strPitch));
         return 0;
     }
@@ -482,6 +484,7 @@ void ChordObj::readCapxNotes(XmlReader& e)
         if (e.name() == "head") {
             QString pitch = e.attribute("pitch");
             QString sstep;
+            QString shape = e.attribute("shape");
             while (e.readNextStartElement()) {
                 const QStringRef& tag(e.name());
                 if (tag == "alter") {
@@ -494,13 +497,18 @@ void ChordObj::readCapxNotes(XmlReader& e)
                     e.unknown();
                 }
             }
-            qDebug("ChordObj::readCapxNotes: pitch '%s' altstep '%s'",
-                   qPrintable(pitch), qPrintable(sstep));
+            qDebug("ChordObj::readCapxNotes: pitch '%s' altstep '%s' shape '%s'",
+                   qPrintable(pitch), qPrintable(sstep), qPrintable(shape));
             int istep = sstep.toInt();
             CNote n;
             n.pitch = pitchStr2Char(pitch);
             n.explAlteration = 0;
             n.headType = 0;
+            if (shape == "none") {
+                n.headGroup = int(NoteHead::Group::HEAD_CROSS);
+            } else {
+                n.headGroup = int(NoteHead::Group::HEAD_NORMAL);
+            }
             n.alteration = istep;
             n.silent = 0;
             notes.append(n);

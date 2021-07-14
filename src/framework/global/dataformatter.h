@@ -23,13 +23,15 @@
 #define MU_FRAMEWORK_DATAFORMATTER_H
 
 class QDate;
+class QDateTime;
 class QString;
 
 class DataFormatter
 {
 public:
     static double formatDouble(const double& val, const int decimals = 2);
-    static QString formatTimeSinceCreation(const QDate& creationDate);
+    static QString formatTimeSince(const QDate& creationDate);
+    static QDateTime dateTimeFromIsoFormat(const QString& dateTimeIso);
 };
 
 #endif // MU_FRAMEWORK_DATAFORMATTER_H

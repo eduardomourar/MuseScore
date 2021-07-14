@@ -112,13 +112,18 @@ void NotationNoteInput::startNoteInput()
     }
     //! ---
 
+    m_interaction->select({ el }, SelectType::SINGLE, 0);
+
+    // Not strictly necessary, just for safety
+    if (is.noteEntryMethod() == Ms::NoteEntryMethod::UNKNOWN) {
+        is.setNoteEntryMethod(Ms::NoteEntryMethod::STEPTIME);
+    }
+
     Duration d(is.duration());
     if (!d.isValid() || d.isZero() || d.type() == Duration::DurationType::V_MEASURE) {
         is.setDuration(Duration(Duration::DurationType::V_QUARTER));
     }
     is.setAccidentalType(Ms::AccidentalType::NONE);
-
-    m_interaction->select({ el }, SelectType::SINGLE, 0);
 
     is.setRest(false);
     is.setNoteEntryMode(true);
@@ -174,8 +179,7 @@ void NotationNoteInput::toggleNoteInputMethod(NoteInputMethod method)
 
 void NotationNoteInput::addNote(NoteName noteName, NoteAddingMode addingMode)
 {
-    Ms::EditData editData;
-    editData.view = m_scoreCallbacks;
+    Ms::EditData editData(m_scoreCallbacks);
 
     startEdit();
     int inote = static_cast<int>(noteName);
@@ -189,11 +193,10 @@ void NotationNoteInput::addNote(NoteName noteName, NoteAddingMode addingMode)
 
 void NotationNoteInput::padNote(const Pad& pad)
 {
-    Ms::EditData ed;
-    ed.view = m_scoreCallbacks;
+    Ms::EditData editData(m_scoreCallbacks);
 
     startEdit();
-    score()->padToggle(pad, ed);
+    score()->padToggle(pad, editData);
     apply();
 
     notifyAboutStateChanged();
@@ -202,7 +205,7 @@ void NotationNoteInput::padNote(const Pad& pad)
 void NotationNoteInput::putNote(const QPointF& pos, bool replace, bool insert)
 {
     startEdit();
-    score()->putNote(pos, replace, insert);
+    score()->putNote(PointF::fromQPointF(pos), replace, insert);
     apply();
 
     notifyNoteAddedChanged();
@@ -210,8 +213,7 @@ void NotationNoteInput::putNote(const QPointF& pos, bool replace, bool insert)
 
 void NotationNoteInput::setAccidental(AccidentalType accidentalType)
 {
-    Ms::EditData editData;
-    editData.view = m_scoreCallbacks;
+    Ms::EditData editData(m_scoreCallbacks);
 
     score()->toggleAccidental(accidentalType, editData);
 
@@ -290,7 +292,7 @@ QRectF NotationNoteInput::cursorRect() const
     constexpr int sideMargin = 4;
     constexpr int skylineMargin = 20;
 
-    QRectF segmentContentRect = segment->contentRect();
+    RectF segmentContentRect = segment->contentRect();
     double x = segmentContentRect.translated(segment->pagePos()).x() - sideMargin;
     double y = system->staffYpage(staffIdx) + system->page()->pos().y();
     double w = segmentContentRect.width() + 2 * sideMargin;
@@ -312,13 +314,13 @@ QRectF NotationNoteInput::cursorRect() const
         y -= skylineMargin;
     }
 
-    QRectF result = QRectF(x, y, w, h);
+    RectF result = RectF(x, y, w, h);
 
     if (configuration()->canvasOrientation().val == framework::Orientation::Horizontal) {
         result.translate(system->page()->pos());
     }
 
-    return result;
+    return result.toQRectF();
 }
 
 void NotationNoteInput::addSlur(Ms::Slur* slur)

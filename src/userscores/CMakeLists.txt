@@ -24,12 +24,36 @@ set(MODULE_QRC userscores.qrc)
 
 set(MODULE_QML_IMPORT ${CMAKE_CURRENT_LIST_DIR}/qml)
 
+if (OS_IS_MAC)
+    set(PLATFORM_SRC
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/macos/macosrecentfilescontroller.mm
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/macos/macosrecentfilescontroller.h
+    )
+    # Don't mix C++ and Objective-C++ in Unity Build
+    set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/internal/platform/macos/macosrecentfilescontroller.mm
+                                PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
+    set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/internal/platform/macos/macosrecentfilescontroller.mm
+                                PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+elseif(OS_IS_WIN)
+    set(PLATFORM_SRC
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/windows/windowsrecentfilescontroller.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/windows/windowsrecentfilescontroller.h
+    )
+else()
+    set(PLATFORM_SRC
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/stub/stubrecentfilescontroller.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/internal/platform/stub/stubrecentfilescontroller.h
+    )
+endif()
+
 set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/userscoresmodule.cpp
     ${CMAKE_CURRENT_LIST_DIR}/userscoresmodule.h
     ${CMAKE_CURRENT_LIST_DIR}/iuserscoresconfiguration.h
     ${CMAKE_CURRENT_LIST_DIR}/iuserscoresservice.h
     ${CMAKE_CURRENT_LIST_DIR}/ifilescorecontroller.h
+    ${CMAKE_CURRENT_LIST_DIR}/iexportscorescenario.h
     ${CMAKE_CURRENT_LIST_DIR}/userscorestypes.h
     ${CMAKE_CURRENT_LIST_DIR}/view/recentscoresmodel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/recentscoresmodel.h
@@ -43,8 +67,11 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/view/templatesmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/view/templatepaintview.cpp
     ${CMAKE_CURRENT_LIST_DIR}/view/templatepaintview.h
+    ${CMAKE_CURRENT_LIST_DIR}/view/exportdialogmodel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/view/exportdialogmodel.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/filescorecontroller.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/filescorecontroller.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/iplatformrecentfilescontroller.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/userscoresconfiguration.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/userscoresconfiguration.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/userscoresservice.cpp
@@ -54,6 +81,11 @@ set(MODULE_SRC
     ${CMAKE_CURRENT_LIST_DIR}/internal/templatesrepository.h
     ${CMAKE_CURRENT_LIST_DIR}/internal/userscoresuiactions.cpp
     ${CMAKE_CURRENT_LIST_DIR}/internal/userscoresuiactions.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/exporttype.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/exporttype.h
+    ${CMAKE_CURRENT_LIST_DIR}/internal/exportscorescenario.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/internal/exportscorescenario.h
+    ${PLATFORM_SRC}
     )
 
 set(MODULE_LINK notation)

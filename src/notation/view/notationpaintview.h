@@ -34,6 +34,8 @@
 #include "context/iglobalcontext.h"
 #include "async/asyncable.h"
 #include "playback/iplaybackcontroller.h"
+#include "shortcuts/ishortcutsregister.h"
+#include "ui/iuiactionsregister.h"
 
 #include "notationviewinputcontroller.h"
 #include "noteinputcursor.h"
@@ -50,6 +52,8 @@ class NotationPaintView : public QQuickPaintedItem, public IControlledView, publ
     INJECT(notation, context::IGlobalContext, globalContext)
     INJECT(notation, playback::IPlaybackController, playbackController)
     INJECT(notation, INotationContextMenu, notationContextMenu)
+    INJECT(notation, mu::shortcuts::IShortcutsRegister, shortcutsRegister)
+    INJECT(notation, ui::IUiActionsRegister, actionsRegister)
 
     Q_PROPERTY(qreal startHorizontalScrollPosition READ startHorizontalScrollPosition NOTIFY horizontalScrollChanged)
     Q_PROPERTY(qreal horizontalScrollSize READ horizontalScrollSize NOTIFY horizontalScrollChanged)
@@ -73,7 +77,7 @@ public:
     qreal width() const override;
     qreal height() const override;
 
-    QPoint toLogical(const QPoint& point) const override;
+    PointF toLogical(const QPoint& point) const override;
 
     Q_INVOKABLE void moveCanvas(int dx, int dy) override;
     void moveCanvasVertical(int dy) override;
@@ -83,7 +87,7 @@ public:
     void scale(qreal scaling, const QPoint& pos) override;
 
     bool isNoteEnterMode() const override;
-    void showShadowNote(const QPointF& pos) override;
+    void showShadowNote(const PointF& pos) override;
 
     void showContextMenu(const ElementType& elementType, const QPoint& pos) override;
     Q_INVOKABLE void handleAction(const QString& actionCode);
@@ -109,6 +113,8 @@ signals:
     void backgroundColorChanged(QColor color);
     void viewportChanged(QRect viewport);
 
+    void activeFocusRequested();
+
 protected:
     void setNotation(INotationPtr notation);
     void setReadonly(bool readonly);
@@ -119,7 +125,7 @@ protected:
 
     QRectF notationContentRect() const;
 
-    QRect toLogical(const QRect& rect) const;
+    RectF toLogical(const QRect& rect) const;
 
     // Draw
     void paint(QPainter* painter) override;
@@ -149,8 +155,8 @@ private:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void hoverMoveEvent(QHoverEvent* event) override;
-    void keyReleaseEvent(QKeyEvent* event) override;
-
+    bool event(QEvent*) override;
+    void shortcutOverride(QKeyEvent* event);
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragLeaveEvent(QDragLeaveEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
@@ -173,12 +179,12 @@ private:
 
     void updateLoopMarkers(const LoopBoundaries& boundaries);
 
-    const Page* pointToPage(const QPointF& point) const;
+    const Page* pointToPage(const PointF& point) const;
     QPointF alignToCurrentPageBorder(const QRectF& showRect, const QPointF& pos) const;
 
-    void paintBackground(const QRect& rect, mu::draw::Painter* painter);
+    void paintBackground(const RectF& rect, draw::Painter* painter);
 
-    QPoint canvasCenter() const;
+    PointF canvasCenter() const;
     std::pair<int, int> constraintCanvas(int dx, int dy) const;
 
     notation::INotationPtr m_notation;

@@ -19,21 +19,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.7
+import QtQuick 2.15
 import QtQuick.Controls 2.2
 
-import MuseScore.NotationScene 1.0
+import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
+import MuseScore.NotationScene 1.0
 
 Rectangle {
     id: root
+
+    property NavigationSection navigationSection: null
 
     height: 30
     visible: notationsView.count > 0
     color: ui.theme.backgroundSecondaryColor
 
-    border.width: 1
-    border.color: ui.theme.strokeColor
+    function ensureActive() {
+        var item = notationsView.itemAtIndex(notationsView.currentIndex)
+        item.navigation.requestActive()
+    }
 
     NotationSwitchListModel {
         id: notationSwitchModel
@@ -65,6 +70,21 @@ Rectangle {
 
         delegate: NotationSwitchButton {
             id: button
+
+            property NavigationPanel navigationPanel: NavigationPanel {
+                name: "NotationView" + model.index
+                section: root.navigationSection
+                order: 1 + model.index
+
+                onNavigationEvent: {
+                    event.accepted = true;
+                }
+            }
+
+            navigation.name: "NotationTab" + model.index
+            navigation.panel: button.navigationPanel
+            navigation.row: 1
+            navigation.column: 1
 
             title: model.title
             needSave: model.needSave

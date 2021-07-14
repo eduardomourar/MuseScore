@@ -27,14 +27,15 @@
 #include "musicxml/exportxml.h"
 
 using namespace mu::iex::musicxml;
-using namespace mu::system;
+using namespace mu::io;
 
-mu::Ret MxlWriter::write(const notation::INotationPtr notation, IODevice& destinationDevice, const Options&)
+mu::Ret MxlWriter::write(notation::INotationPtr notation, io::Device& destinationDevice, const Options&)
 {
     IF_ASSERT_FAILED(notation) {
         return make_ret(Ret::Code::UnknownError);
     }
     Ms::Score* score = notation->elements()->msScore();
+
     IF_ASSERT_FAILED(score) {
         return make_ret(Ret::Code::UnknownError);
     }

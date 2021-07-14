@@ -26,13 +26,12 @@ import MuseScore.UiComponents 1.0
 import QtQuick.Layouts 1.3
 import "../../common"
 
-StyledPopup {
+StyledPopupView {
     id: root
 
     property QtObject model: null
 
-    implicitHeight: contentColumn.implicitHeight + topPadding + bottomPadding
-    width: parent.width
+    contentHeight: contentColumn.implicitHeight
 
     Column {
         id: contentColumn
@@ -54,11 +53,10 @@ StyledPopup {
             titleText: qsTrc("inspector", "Mode")
             propertyItem: root.model ? root.model.mode : null
 
-            StyledComboBox {
-                width: parent.width
+            Dropdown {
+                id: modes
 
-                textRoleName: "text"
-                valueRoleName: "value"
+                width: parent.width
 
                 model: [
                     { text: qsTrc("inspector", "Unknown"), value: KeySignatureTypes.MODE_UNKNOWN },
@@ -73,10 +71,10 @@ StyledPopup {
                     { text: qsTrc("inspector", "Locrian"), value: KeySignatureTypes.MODE_LOCRIAN }
                 ]
 
-                currentIndex: root.model && !root.model.mode.isUndefined ? indexOfValue(root.model.mode.value) : -1
+                currentIndex: root.model && !root.model.mode.isUndefined ? modes.indexOfValue(root.model.mode.value) : -1
 
-                onValueChanged: {
-                    root.model.mode.value = value
+                onCurrentValueChanged: {
+                    root.model.mode.value = modes.currentValue
                 }
             }
         }

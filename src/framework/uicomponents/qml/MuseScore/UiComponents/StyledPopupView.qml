@@ -21,7 +21,6 @@
  */
 
 import QtQuick 2.15
-import QtGraphicalEffects 1.0
 
 import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
@@ -36,30 +35,26 @@ PopupView {
     property alias width: rootContainer.width
     property alias height: rootContainer.height
 
-    property int padding: 16
     property int margins: 16
 
-    property alias contentWidth: contentBody.width
-    property alias contentHeight: contentBody.height
+    property int contentWidth: 240
+    property int contentHeight: contentBody.childrenRect.height
 
-    property bool opensUpward: false
-    property var arrowX: width / 2
-
-    property bool animationEnabled: true
+    property bool animationEnabled: false
 
     property alias navigation: keynavPanel
     property bool isDoActiveParentOnClose: true
 
     closePolicy: PopupView.CloseOnPressOutsideParent
 
-    x: parent.width / 2
-    y: opensUpward ? (-height) : (parent.height - root.padding)
+    x: (root.parent.width / 2) - (root.width / 2)
+    y: root.parent.height
 
-    property NavigationPopupPanel keynavPanel: NavigationPopupPanel {
+    property NavigationPanel keynavPanel: NavigationPanel {
         id: keynavPanel
         enabled: root.isOpened
         order: {
-            var pctrl = keynavPanel.parentControl;
+            var pctrl = root.navigationParentControl;
             if (pctrl) {
                 if (pctrl.panel) {
                     return pctrl.panel.order + 1
@@ -69,7 +64,7 @@ PopupView {
         }
 
         section: {
-            var pctrl = keynavPanel.parentControl;
+            var pctrl = root.navigationParentControl;
             if (pctrl) {
                 if (pctrl.panel) {
                     return pctrl.panel.section
@@ -81,7 +76,9 @@ PopupView {
         onActiveChanged: {
             if (keynavPanel.active) {
                 root.forceActiveFocus()
-                rootContainer.focus = true
+                rootContainer.forceActiveFocus()
+            } else {
+                root.close()
             }
         }
 
@@ -94,8 +91,8 @@ PopupView {
 
     onClosed: {
         rootContainer.focus = false
-        if (root.isDoActiveParentOnClose && keynavPanel.parentControl) {
-            keynavPanel.parentControl.forceActive()
+        if (root.isDoActiveParentOnClose && root.navigationParentControl) {
+            root.navigationParentControl.requestActive()
         }
     }
 
@@ -104,6 +101,13 @@ PopupView {
         width: contentContainer.width + root.padding * 2
         height: contentContainer.height + root.padding * 2
 
+        implicitWidth: contentContainer.implicitWidth + root.padding * 2
+        implicitHeight: contentContainer.implicitHeight + root.padding * 2
+
+        property alias cascadeAlign: root.cascadeAlign
+
+        focus: true
+
         Item {
             id: contentContainer
             x: root.padding
@@ -111,20 +115,83 @@ PopupView {
             width: contentBody.width + root.margins * 2
             height: contentBody.height + root.margins * 2
 
+            implicitWidth: contentBody.implicitWidth + root.margins * 2
+            implicitHeight: contentBody.implicitHeight + root.margins * 2
+
+            scale: root.animationEnabled ? 0.7 : 1.0
+            opacity: root.animationEnabled ? 0.5 : 1.0
+            transformOrigin: Item.Center
+
+            StyledDropShadow {
+                anchors.fill: parent
+                anchors.topMargin: root.padding / 2
+                anchors.bottomMargin: root.padding / 2
+                source: contentBackground
+            }
+
             Rectangle {
                 id: contentBackground
                 anchors.fill: parent
                 color: ui.theme.backgroundPrimaryColor
+                radius: 4
                 border.width: 1
                 border.color: ui.theme.strokeColor
+            }
+
+            Canvas {
+                id: arrow
+
+                height: root.padding
+                width: root.padding * 2
+
+                visible: root.showArrow && arrow.height > 0
+                enabled: root.showArrow
+
+                x: root.arrowX - arrow.width / 2 - root.padding
+                y: root.opensUpward ? parent.y + parent.height - height - contentBackground.border.width
+                                    : -height + contentBackground.border.width
+
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.clearRect(0, 0, width, height)
+
+                    ctx.lineWidth = 2;
+                    ctx.fillStyle = contentBackground.color
+                    ctx.strokeStyle = contentBackground.border.color
+                    ctx.beginPath();
+
+                    if (opensUpward) {
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(width / 2, height - 1);
+                        ctx.lineTo(width, 0);
+                    } else {
+                        ctx.moveTo(0, height);
+                        ctx.lineTo(width / 2, 1);
+                        ctx.lineTo(width, height);
+                    }
+
+                    ctx.stroke();
+                    ctx.fill();
+                }
+
+                Connections {
+                    target: root
+
+                    function onOpensUpwardChanged() {
+                        arrow.requestPaint()
+                    }
+                }
             }
 
             Item {
                 id: contentBody
                 x: root.margins
                 y: root.margins
-                width: childrenRect.width
-                height: childrenRect.height
+                width: root.contentWidth
+                height: root.contentHeight
+
+                implicitWidth: root.contentWidth
+                implicitHeight: root.contentHeight
             }
         }
 
@@ -138,7 +205,7 @@ PopupView {
             State {
                 name: "CLOSED"
                 when: !root.isOpened
-                PropertyChanges { target: contentContainer; scale: 0.7; opacity: 0.5 }
+                PropertyChanges { target: contentContainer; scale: root.animationEnabled ? 0.7 : 1.0; opacity: root.animationEnabled ? 0.5 : 1.0 }
             }
         ]
 

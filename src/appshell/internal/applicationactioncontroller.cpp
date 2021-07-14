@@ -22,7 +22,7 @@
 #include "applicationactioncontroller.h"
 
 #include <QCoreApplication>
-#include <QMainWindow>
+#include <QCloseEvent>
 
 #include "translation.h"
 
@@ -46,36 +46,43 @@ void ApplicationActionController::init()
     dispatcher()->reg(this, "preference-dialog", this, &ApplicationActionController::openPreferencesDialog);
 
     dispatcher()->reg(this, "revert-factory", this, &ApplicationActionController::revertToFactorySettings);
+
+    qApp->installEventFilter(this);
+}
+
+bool ApplicationActionController::eventFilter(QObject* watched, QEvent* event)
+{
+    QCloseEvent* closeEvent = dynamic_cast<QCloseEvent*>(event);
+    if (closeEvent && watched == mainWindow()->qWindow()) {
+        quit();
+        closeEvent->ignore();
+        return true;
+    }
+
+    return QObject::eventFilter(watched, event);
 }
 
 mu::ValCh<bool> ApplicationActionController::isFullScreen() const
 {
     ValCh<bool> result;
     result.ch = m_fullScreenChannel;
-    // todo
-//    result.val = mainWindow()->qMainWindow() ? mainWindow()->qMainWindow()->isFullScreen() : false;
+    result.val = mainWindow()->isFullScreen();
+
     return result;
 }
 
 void ApplicationActionController::quit()
 {
-    QCoreApplication::quit();
+    if (fileScoreController()->closeOpenedProject()) {
+        QCoreApplication::quit();
+    }
 }
 
 void ApplicationActionController::toggleFullScreen()
 {
-    QMainWindow* qMainWindow = mainWindow()->qMainWindow();
-    if (!qMainWindow) {
-        return;
-    }
-
-    if (!qMainWindow->isFullScreen()) {
-        qMainWindow->showFullScreen();
-    } else {
-        qMainWindow->showNormal();
-    }
-
-    m_fullScreenChannel.send(qMainWindow->isFullScreen());
+    mainWindow()->toggleFullScreen();
+    bool isFullScreen = mainWindow()->isFullScreen();
+    m_fullScreenChannel.send(isFullScreen);
 }
 
 void ApplicationActionController::openAboutDialog()
@@ -119,6 +126,11 @@ void ApplicationActionController::openLeaveFeedbackPage()
 
 void ApplicationActionController::openPreferencesDialog()
 {
+    if (multiInstancesProvider()->isPreferencesAlreadyOpened()) {
+        multiInstancesProvider()->activateWindowWithOpenedPreferences();
+        return;
+    }
+
     interactive()->open("musescore://preferences");
 }
 
@@ -129,12 +141,12 @@ void ApplicationActionController::revertToFactorySettings()
                                            "Reverting will not remove any scores from your computer.\n"
                                            "Are you sure you want to proceed?");
 
-    IInteractive::Button button = interactive()->question(std::string(), question, {
+    IInteractive::Result result = interactive()->question(std::string(), question, {
         IInteractive::Button::Yes,
         IInteractive::Button::No
     });
 
-    if (button == IInteractive::Button::Yes) {
+    if (result.standartButton() == IInteractive::Button::Yes) {
         configuration()->revertToFactorySettings();
     }
 }

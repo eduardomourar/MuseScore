@@ -24,21 +24,18 @@ private:
 class FileLogDest : public LogDest
 {
 public:
-    FileLogDest(const std::string& path, const std::string& name, const std::string& ext, const LogLayout& l);
+    FileLogDest(const std::string& filePath, const LogLayout& l);
     ~FileLogDest();
 
     std::string name() const;
     void write(const LogMsg& logMsg);
 
+    std::string filePath() const;
+
 private:
 
-    void rotate();
-
-    Date m_rotateDate;
     std::ofstream m_file;
-    std::string m_path;
-    std::string m_name;
-    std::string m_ext;
+    std::string m_filePath;
 };
 
 class ConsoleLogDest : public LogDest

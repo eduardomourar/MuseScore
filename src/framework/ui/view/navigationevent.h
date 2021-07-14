@@ -42,7 +42,9 @@ public:
         Right,
         Up,
         Down,
-        Escape
+        Trigger,
+        Escape,
+        AboutActive
     };
     Q_ENUM(Type)
 
@@ -51,6 +53,9 @@ public:
     Type type() const;
     bool accepted() const;
     void setAccepted(bool accepted);
+
+    Q_INVOKABLE QVariant data(const QString& key) const;
+    Q_INVOKABLE void setData(const QString& key, const QVariant& val);
 
 private:
     INavigation::EventPtr m_event;

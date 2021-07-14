@@ -28,21 +28,17 @@ void AbstractAudioSource::setSampleRate(unsigned int sampleRate)
     m_sampleRate = sampleRate;
 }
 
-mu::async::Channel<unsigned int> AbstractAudioSource::streamsCountChanged() const
+bool AbstractAudioSource::isActive() const
+{
+    return m_isActive;
+}
+
+void AbstractAudioSource::setIsActive(bool isActive)
+{
+    m_isActive = isActive;
+}
+
+mu::async::Channel<unsigned int> AbstractAudioSource::audioChannelsCountChanged() const
 {
     return m_streamsCountChanged;
-}
-
-const float* AbstractAudioSource::data() const
-{
-    return m_buffer.data();
-}
-
-void AbstractAudioSource::setBufferSize(unsigned int samples)
-{
-    auto sc = streamCount();
-    auto targetSize = samples * sc;
-    if (targetSize > 0 && m_buffer.size() < targetSize) {
-        m_buffer.resize(samples * streamCount());
-    }
 }

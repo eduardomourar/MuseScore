@@ -28,22 +28,22 @@ SineSource::SineSource()
 {
 }
 
-unsigned int SineSource::streamCount() const
+unsigned int SineSource::audioChannelsCount() const
 {
     return 1;
 }
 
-void SineSource::forward(unsigned int sampleCount)
+void SineSource::process(float* buffer, unsigned int sampleCount)
 {
-    auto streams = streamCount();
+    auto streams = audioChannelsCount();
     for (unsigned int i = 0; i < sampleCount; ++i) {
         m_phase += m_frequency / m_sampleRate * 2 * M_PI;
         if (m_phase > 2 * M_PI) {
-            m_phase -= 2 * M_PI;
+            m_phase -= 2 * float(M_PI);
         }
 
         for (unsigned int s = 0; s < streams; ++s) {
-            m_buffer[streams * i + s] = 0.1 * std::sin(m_phase + s * 2 * M_PI / streams);
+            buffer[streams * i + s] = 0.1 * std::sin(m_phase + s * 2 * M_PI / streams);
         }
     }
 }

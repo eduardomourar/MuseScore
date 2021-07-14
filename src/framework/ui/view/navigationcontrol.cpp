@@ -20,9 +20,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "navigationcontrol.h"
+
 #include "navigationpanel.h"
 
+#include "log.h"
+
 using namespace mu::ui;
+using namespace mu::accessibility;
 
 NavigationControl::NavigationControl(QObject* parent)
     : AbstractNavigation(parent)
@@ -33,6 +37,7 @@ NavigationControl::~NavigationControl()
 {
     if (m_panel) {
         m_panel->removeControl(this);
+        setAccessibleParent(nullptr);
     }
 }
 
@@ -69,6 +74,9 @@ bool NavigationControl::active() const
 void NavigationControl::setActive(bool arg)
 {
     AbstractNavigation::setActive(arg);
+    if (m_accessible) {
+        m_accessible->setState(IAccessible::State::Focused, arg);
+    }
 }
 
 mu::async::Channel<bool> NavigationControl::activeChanged() const
@@ -86,18 +94,19 @@ void NavigationControl::trigger()
     emit triggered();
 }
 
-mu::async::Channel<INavigationControl*> NavigationControl::forceActiveRequested() const
+mu::async::Channel<INavigationControl*> NavigationControl::activeRequested() const
 {
     return m_forceActiveRequested;
 }
 
-void NavigationControl::forceActive()
+void NavigationControl::requestActive()
 {
     m_forceActiveRequested.send(this);
 }
 
 void NavigationControl::setPanel(NavigationPanel* panel)
 {
+    TRACEFUNC;
     if (m_panel == panel) {
         return;
     }
@@ -115,14 +124,22 @@ void NavigationControl::setPanel(NavigationPanel* panel)
     }
 
     emit panelChanged(m_panel);
+
+    setAccessibleParent(m_panel ? m_panel->accessible() : nullptr);
 }
 
 void NavigationControl::onPanelDestroyed()
 {
     m_panel = nullptr;
+    setAccessibleParent(nullptr);
 }
 
-NavigationPanel* NavigationControl::panel() const
+NavigationPanel* NavigationControl::panel_property() const
+{
+    return m_panel;
+}
+
+INavigationPanel* NavigationControl::panel() const
 {
     return m_panel;
 }

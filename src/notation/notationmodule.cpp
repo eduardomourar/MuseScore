@@ -26,29 +26,24 @@
 #include "modularity/ioc.h"
 #include "ui/iuiengine.h"
 #include "ui/iuiactionsregister.h"
+#include "project/inotationwritersregister.h"
 
-#include "internal/notationcreator.h"
 #include "internal/notation.h"
 #include "internal/notationactioncontroller.h"
 #include "internal/notationconfiguration.h"
 #include "internal/midiinputcontroller.h"
 #include "internal/notationuiactions.h"
-#include "internal/notationreadersregister.h"
-#include "internal/notationwritersregister.h"
-#include "internal/mscznotationreader.h"
 #include "internal/msczmetareader.h"
+#include "internal/positionswriter.h"
+#include "internal/instrumentsrepository.h"
 
 #include "view/notationpaintview.h"
-#include "view/notationaccessibilitymodel.h"
-#include "view/zoomcontrolmodel.h"
-#include "view/concertpitchcontrolmodel.h"
-#include "view/viewmodecontrolmodel.h"
 #include "view/notationswitchlistmodel.h"
 #include "view/partlistmodel.h"
 #include "view/searchpopupmodel.h"
 #include "view/noteinputbarmodel.h"
 #include "view/noteinputbarcustomisemodel.h"
-#include "view/internal/abstractnoteinputbaritem.h"
+#include "view/noteinputbarcustomiseitem.h"
 #include "view/internal/undoredomodel.h"
 #include "view/notationtoolbarmodel.h"
 #include "view/notationnavigator.h"
@@ -59,6 +54,7 @@
 #include "view/widgets/measureproperties.h"
 #include "view/widgets/editstaff.h"
 #include "view/widgets/breaksdialog.h"
+#include "view/widgets/pagesettings.h"
 #include "view/widgets/scoreproperties.h"
 #include "view/widgets/transposedialog.h"
 #include "view/widgets/selectnotedialog.h"
@@ -67,8 +63,10 @@
 #include "view/notationcontextmenu.h"
 #include "view/internal/undoredomodel.h"
 
+#include "diagnostics/idiagnosticspathsregister.h"
+
 using namespace mu::notation;
-using namespace mu::framework;
+using namespace mu::modularity;
 using namespace mu::ui;
 using namespace mu::actions;
 using namespace mu::uicomponents;
@@ -77,6 +75,7 @@ static std::shared_ptr<NotationConfiguration> s_configuration = std::make_shared
 static std::shared_ptr<NotationActionController> s_actionController = std::make_shared<NotationActionController>();
 static std::shared_ptr<NotationUiActions> s_notationUiActions = std::make_shared<NotationUiActions>(s_actionController);
 static std::shared_ptr<MidiInputController> s_midiInputController = std::make_shared<MidiInputController>();
+static std::shared_ptr<InstrumentsRepository> s_instrumentsRepository = std::make_shared<InstrumentsRepository>();
 
 static void notationscene_init_qrc()
 {
@@ -90,15 +89,10 @@ std::string NotationModule::moduleName() const
 
 void NotationModule::registerExports()
 {
-    ioc()->registerExport<INotationCreator>(moduleName(), new NotationCreator());
     ioc()->registerExport<INotationConfiguration>(moduleName(), s_configuration);
+    ioc()->registerExport<IInstrumentsRepository>(moduleName(), s_instrumentsRepository);
     ioc()->registerExport<IMsczMetaReader>(moduleName(), new MsczMetaReader());
     ioc()->registerExport<INotationContextMenu>(moduleName(), new NotationContextMenu());
-
-    std::shared_ptr<INotationReadersRegister> readers = std::make_shared<NotationReadersRegister>();
-    readers->reg({ "mscz", "mscx" }, std::make_shared<MsczNotationReader>());
-    ioc()->registerExport<INotationReadersRegister>(moduleName(), readers);
-    ioc()->registerExport<INotationWritersRegister>(moduleName(), std::make_shared<NotationWritersRegister>());
 }
 
 void NotationModule::resolveImports()
@@ -108,10 +102,19 @@ void NotationModule::resolveImports()
         ar->reg(s_notationUiActions);
     }
 
+    auto writers = modularity::ioc()->resolve<project::INotationWritersRegister>(moduleName());
+    if (writers) {
+        writers->reg({ "sposXML" }, std::make_shared<PositionsWriter>(PositionsWriter::ElementType::SEGMENT));
+        writers->reg({ "mposXML" }, std::make_shared<PositionsWriter>(PositionsWriter::ElementType::MEASURE));
+    }
+
     auto ir = ioc()->resolve<IInteractiveUriRegister>(moduleName());
     if (ir) {
         ir->registerUri(Uri("musescore://notation/style"),
                         ContainerMeta(ContainerType::QWidgetDialog, qRegisterMetaType<EditStyle>("EditStyle")));
+
+        ir->registerUri(Uri("musescore://notation/pagesettings"),
+                        ContainerMeta(ContainerType::QWidgetDialog, qRegisterMetaType<PageSettings>("PageSettings")));
 
         ir->registerUri(Uri("musescore://notation/properties"),
                         ContainerMeta(ContainerType::QWidgetDialog, qRegisterMetaType<ScorePropertiesDialog>("ScorePropertiesDialog")));
@@ -156,16 +159,12 @@ void NotationModule::registerResources()
 void NotationModule::registerUiTypes()
 {
     qmlRegisterType<NotationPaintView>("MuseScore.NotationScene", 1, 0, "NotationPaintView");
-    qmlRegisterType<NotationAccessibilityModel>("MuseScore.NotationScene", 1, 0, "NotationAccessibilityModel");
-    qmlRegisterType<ZoomControlModel>("MuseScore.NotationScene", 1, 0, "ZoomControlModel");
-    qmlRegisterType<ConcertPitchControlModel>("MuseScore.NotationScene", 1, 0, "ConcertPitchControlModel");
-    qmlRegisterType<ViewModeControlModel>("MuseScore.NotationScene", 1, 0, "ViewModeControlModel");
     qmlRegisterType<NotationSwitchListModel>("MuseScore.NotationScene", 1, 0, "NotationSwitchListModel");
     qmlRegisterType<PartListModel>("MuseScore.NotationScene", 1, 0, "PartListModel");
     qmlRegisterType<SearchPopupModel>("MuseScore.NotationScene", 1, 0, "SearchPopupModel");
     qmlRegisterType<NoteInputBarModel>("MuseScore.NotationScene", 1, 0, "NoteInputBarModel");
     qmlRegisterType<NoteInputBarCustomiseModel>("MuseScore.NotationScene", 1, 0, "NoteInputBarCustomiseModel");
-    qmlRegisterType<AbstractNoteInputBarItem>("MuseScore.NotationScene", 1, 0, "NoteInputBarItem");
+    qmlRegisterUncreatableType<NoteInputBarCustomiseItem>("MuseScore.NotationScene", 1, 0, "NoteInputBarCustomiseItem", "Cannot create");
     qmlRegisterType<NotationToolBarModel>("MuseScore.NotationScene", 1, 0, "NotationToolBarModel");
     qmlRegisterType<NotationNavigator>("MuseScore.NotationScene", 1, 0, "NotationNavigator");
     qmlRegisterType<UndoRedoModel>("MuseScore.NotationScene", 1, 0, "UndoRedoModel");
@@ -179,16 +178,38 @@ void NotationModule::registerUiTypes()
     if (ui) {
         ui->addSourceImportPath(notation_QML_IMPORT);
     }
-
-    Ms::MScore::registerUiTypes();
 }
 
-void NotationModule::onInit(const IApplication::RunMode&)
+void NotationModule::onInit(const framework::IApplication::RunMode&)
 {
     s_configuration->init();
+    s_instrumentsRepository->init();
     s_actionController->init();
     s_notationUiActions->init();
     s_midiInputController->init();
 
     Notation::init();
+
+    auto pr = modularity::ioc()->resolve<diagnostics::IDiagnosticsPathsRegister>(moduleName());
+    if (pr) {
+        io::paths instrPaths = s_configuration->instrumentListPaths();
+        for (const io::path& p : instrPaths) {
+            pr->reg("instruments", p);
+        }
+
+        io::paths uinstrPaths = s_configuration->userInstrumentListPaths();
+        for (const io::path& p : uinstrPaths) {
+            pr->reg("user instruments", p);
+        }
+
+        io::paths scoreOrderPaths = s_configuration->scoreOrderListPaths();
+        for (const io::path& p : scoreOrderPaths) {
+            pr->reg("scoreOrder", p);
+        }
+
+        io::paths uscoreOrderPaths = s_configuration->userScoreOrderListPaths();
+        for (const io::path& p : uscoreOrderPaths) {
+            pr->reg("user scoreOrder", p);
+        }
+    }
 }

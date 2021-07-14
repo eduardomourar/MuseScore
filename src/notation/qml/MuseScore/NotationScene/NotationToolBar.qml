@@ -31,6 +31,8 @@ Rectangle {
 
     signal activeFocusRequested()
 
+    color: ui.theme.backgroundPrimaryColor
+
     Component.onCompleted: {
         toolbarModel.load()
     }
@@ -38,6 +40,7 @@ Rectangle {
     NavigationPanel {
         id: keynavSub
         name: "NotationToolBar"
+        enabled: root.enabled && root.visible
         onActiveChanged: {
             if (active) {
                 root.activeFocusRequested()
@@ -69,7 +72,10 @@ Rectangle {
             icon: model.icon
             iconFont: ui.theme.toolbarIconsFont
 
-            hint: model.hint
+            toolTipTitle: model.title
+            toolTipDescription: model.description
+            toolTipShortcut: model.shortcut
+
             enabled: model.enabled
             textFont: ui.theme.tabFont
 

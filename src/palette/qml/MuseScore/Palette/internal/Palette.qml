@@ -108,7 +108,7 @@ GridView {
     readonly property int ncolumns: Math.max(0, Math.floor(width / cellWidth))
     readonly property real lastColumnCellWidth : cellWidth + (width % cellWidth) // width of last cell in a row: might be stretched to avoid a gap at row end
 
-    signal moreButtonClicked(var navigationControl)
+    signal moreButtonClicked(var btn)
 
     MouseArea {
         // Dummy MouseArea to prevent propagation of clicks on empty place to palette's parent
@@ -195,7 +195,7 @@ GridView {
             hoveredStateColor: ui.theme.accentColor
             pressedStateColor: ui.theme.accentColor
 
-            onClicked: paletteView.moreButtonClicked(moreButton.navigation)
+            onClicked: paletteView.moreButtonClicked(moreButton)
         }
     }
 
@@ -388,11 +388,9 @@ GridView {
     function focusFirstItem() {
         if (count == 0 && moreButton.visible) {
             moreButton.forceActiveFocus();
-            moreButton.navigation.forceActive()
         } else {
             currentIndex = 0;
             currentItem.forceActiveFocus();
-            currentItem.navigation.forceActive()
         }
     }
 
@@ -537,7 +535,7 @@ GridView {
             Accessible.name: model.accessibleText;
 
             // leftClickArea
-            mouseArea.drag.target: this
+            mouseArea.drag.target: draggedIcon
             mouseArea.onPressed: {
                 paletteView.currentIndex = paletteCell.rowIndex;
                 paletteView.updateSelection(true);
@@ -615,7 +613,30 @@ GridView {
             function showCellMenu() {
                 contextMenu.modelIndex = modelIndex
                 contextMenu.canEdit = paletteView.paletteController.canEdit(paletteView.paletteRootIndex)
-                contextMenu.popup()
+                contextMenu.toggleOpened(contextMenu.items, null, mouseArea.mouseX, mouseArea.mouseY)
+            }
+
+            StyledMenuLoader {
+                id: contextMenu
+
+                property var modelIndex: null
+                property bool canEdit: true
+
+                property var items: [
+                    { code: "delete", title: qsTrc("palette", "Delete"), icon: IconCode.DELETE_TANK, enabled: contextMenu.canEdit },
+                    { code: "properties", title: qsTrc("palette", "Properties…"), enabled: contextMenu.canEdit }
+                ]
+
+                onHandleAction: {
+                    switch(actionCode) {
+                    case "delete":
+                        paletteView.paletteController.remove(contextMenu.modelIndex)
+                        break
+                    case "properties":
+                        Qt.callLater(paletteView.paletteController.editCellProperties, contextMenu.modelIndex)
+                        break
+                    }
+                }
             }
 
             Connections {
@@ -629,30 +650,4 @@ GridView {
             }
         } // end ListItemBlank
     } // end DelegateModel
-
-    ContextMenu {
-        id: contextMenu
-
-        property var modelIndex: null
-        property bool canEdit: true
-
-        StyledContextMenuItem {
-            hintIcon: IconCode.DELETE_TANK
-            text: qsTrc("palette", "Delete")
-            enabled: contextMenu.canEdit
-
-            onTriggered: {
-                paletteView.paletteController.remove(contextMenu.modelIndex)
-            }
-        }
-
-        StyledContextMenuItem {
-            text: qsTrc("palette", "Properties…")
-            enabled: contextMenu.canEdit
-
-            onTriggered: {
-                Qt.callLater(paletteView.paletteController.editCellProperties, contextMenu.modelIndex)
-            }
-        }
-    }
 }

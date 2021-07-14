@@ -39,20 +39,6 @@ PreferencesPage {
         id: preferencesModel
     }
 
-    Rectangle {
-        anchors.fill: parent
-
-        color: ui.theme.backgroundSecondaryColor
-
-        MouseArea {
-            anchors.fill: parent
-
-            onClicked: {
-                root.forceActiveFocus()
-            }
-        }
-    }
-
     Column {
         anchors.fill: parent
         spacing: 24
@@ -77,8 +63,8 @@ PreferencesPage {
                         title: qsTrc("appshell", "Default zoom:")
                         titleWidth: 210
 
-                        control.textRoleName: "title"
-                        control.valueRoleName: "value"
+                        control.textRole: "title"
+                        control.valueRole: "value"
 
                         currentIndex: control.indexOfValue(preferencesModel.defaultZoom.type)
 

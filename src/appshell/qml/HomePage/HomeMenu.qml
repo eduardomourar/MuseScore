@@ -19,13 +19,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.7
+import QtQuick 2.15
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
-import MuseScore.UiComponents 1.0
 import MuseScore.Ui 1.0
-
+import MuseScore.UiComponents 1.0
 import MuseScore.Cloud 1.0
 
 Rectangle {
@@ -37,6 +36,23 @@ Rectangle {
 
     color: ui.theme.backgroundPrimaryColor
 
+    NavigationSection {
+        id: navSec
+        name: "HomeMenuSection"
+        enabled: root.visible
+        order: 2
+    }
+
+    NavigationPanel {
+        id: navPanel
+        name: "HomeMenuPanel"
+        section: navSec
+        order: 1
+        direction: NavigationPanel.Vertical
+
+        accessible.name: qsTrc("appshell", "Home menu") + " " + navPanel.directionInfo
+    }
+
     ColumnLayout {
         anchors.fill: parent
 
@@ -45,6 +61,10 @@ Rectangle {
         AccountInfoButton {
             Layout.fillWidth: true
             Layout.preferredHeight: 60
+
+            navigation.name: "AccountInfo"
+            navigation.panel: navPanel
+            navigation.row: 1
 
             checked: root.currentPageName === "account"
 
@@ -81,6 +101,10 @@ Rectangle {
                 id: radioButtonDelegate
 
                 width: parent.width
+
+                navigation.name: title
+                navigation.panel: navPanel
+                navigation.row: 2 + model.index
 
                 spacing: 30
                 leftPadding: spacing

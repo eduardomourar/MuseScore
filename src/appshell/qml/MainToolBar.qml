@@ -19,8 +19,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import QtQuick 2.7
-import QtQuick.Controls 2.0
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+
 import MuseScore.Ui 1.0
 import MuseScore.UiComponents 1.0
 
@@ -30,9 +31,11 @@ Rectangle {
     width: radioButtonList.contentWidth
     height: radioButtonList.contentHeight
 
+    color: ui.theme.backgroundPrimaryColor
+
     property alias navigation: keynavSub
 
-    property var currentUri: "musescore://home"
+    property string currentUri: "musescore://home"
     property var items: [
         {
             title: qsTrc("appshell", "Home"),
@@ -61,6 +64,8 @@ Rectangle {
     NavigationPanel {
         id: keynavSub
         name: "MainToolBar"
+        enabled: root.enabled && root.visible
+        accessible.name: qsTrc("appshell", "Main tool bar") + " " + keynavSub.directionInfo
     }
 
     RadioButtonGroup {

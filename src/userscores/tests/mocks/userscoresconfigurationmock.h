@@ -37,11 +37,13 @@ public:
 
     MOCK_METHOD(io::paths, availableTemplatesPaths, (), (const, override));
 
-    MOCK_METHOD(ValCh<io::path>, templatesPath, (), (const, override));
-    MOCK_METHOD(void, setTemplatesPath, (const io::path&), (override));
+    MOCK_METHOD(io::path, userTemplatesPath, (), (const, override));
+    MOCK_METHOD(void, setUserTemplatesPath, (const io::path&), (override));
+    MOCK_METHOD(async::Channel<io::path>, userTemplatesPathChanged, (), (const, override));
 
-    MOCK_METHOD(ValCh<io::path>, scoresPath, (), (const, override));
-    MOCK_METHOD(void, setScoresPath, (const io::path&), (override));
+    MOCK_METHOD(io::path, userScoresPath, (), (const, override));
+    MOCK_METHOD(void, setUserScoresPath, (const io::path&), (override));
+    MOCK_METHOD(async::Channel<io::path>, userScoresPathChanged, (), (const, override));
 
     MOCK_METHOD(io::path, defaultSavingFilePath, (const io::path&), (const, override));
 
@@ -50,6 +52,9 @@ public:
 
     MOCK_METHOD(PreferredScoreCreationMode, preferredScoreCreationMode, (), (const, override));
     MOCK_METHOD(void, setPreferredScoreCreationMode, (PreferredScoreCreationMode), (override));
+
+    MOCK_METHOD(bool, needShowWarningAboutUnsavedScore, (), (const, override));
+    MOCK_METHOD(void, setNeedShowWarningAboutUnsavedScore, (bool), (override));
 };
 }
 

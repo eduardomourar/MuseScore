@@ -20,68 +20,42 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "audiobuffer.h"
+
 #include <cstring>
+
 #include "log.h"
 
 using namespace mu::audio;
 
-AudioBuffer::AudioBuffer(unsigned int streamsPerSample, unsigned int size)
-    : m_streamsPerSample(streamsPerSample)
+void AudioBuffer::init(const audioch_t audioChannelsCount, const samples_t samplesPerChannel)
 {
-    m_data.resize(size * m_streamsPerSample, 0.f);
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    m_samplesPerChannel = samplesPerChannel;
+    m_audioChannelsCount = audioChannelsCount;
+
+    m_data.resize(m_samplesPerChannel * m_audioChannelsCount, 0.f);
 }
 
 void AudioBuffer::setSource(std::shared_ptr<IAudioSource> source)
 {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_source = source;
 }
 
 void AudioBuffer::forward()
 {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     fillup();
 }
 
-void AudioBuffer::push(const float* source, int sampleCount)
+void AudioBuffer::pop(float* dest, size_t sampleCount)
 {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-    unsigned int from = m_writeIndex;
+    size_t from = m_readIndex;
     auto memStep = sizeof(float);
-    auto to = m_writeIndex + sampleCount * m_streamsPerSample;
-    if (to > m_data.size()) {
-        to = m_data.size() - 1;
-    }
-    auto count = to - from;
-    std::memcpy(m_data.data() + m_writeIndex, source, count * memStep);
-    m_writeIndex += count;
-
-    int left = sampleCount * m_streamsPerSample - count;
-    if (left > 0) {
-        std::memcpy(m_data.data(), source + count, left * memStep);
-        m_writeIndex = left;
-    }
-
-    if (m_writeIndex >= m_data.size()) {
-        m_writeIndex -= m_data.size();
-    }
-}
-
-void AudioBuffer::pop(float* dest, unsigned int sampleCount)
-{
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-    //catch up if we are fall behind
-    if (sampleCount > sampleLag()) {
-        //! TODO We have to decide to wait or skip.
-        //! We cannot make a direct call, this is a thread-unsafe.
-        //fillup();
-    }
-
-    unsigned int from = m_readIndex;
-    auto memStep = sizeof(float);
-    auto to = m_readIndex + sampleCount * m_streamsPerSample;
+    size_t to = m_readIndex + sampleCount * m_audioChannelsCount;
     if (to > m_data.size()) {
         to = m_data.size();
     }
@@ -89,7 +63,7 @@ void AudioBuffer::pop(float* dest, unsigned int sampleCount)
     std::memcpy(dest, m_data.data() + from, count * memStep);
     m_readIndex += count;
 
-    int left = sampleCount * m_streamsPerSample - count;
+    size_t left = sampleCount * m_audioChannelsCount - count;
     if (left > 0) {
         std::memcpy(dest + count, m_data.data(), left * memStep);
         m_readIndex = left;
@@ -100,17 +74,14 @@ void AudioBuffer::pop(float* dest, unsigned int sampleCount)
     }
 }
 
-void AudioBuffer::setMinSampleLag(unsigned int lag)
+void AudioBuffer::setMinSampleLag(size_t lag)
 {
-    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     IF_ASSERT_FAILED(lag < m_data.size()) {
         lag = m_data.size();
     }
     m_minSampleLag = lag;
-    if (m_data.size() < 2 * m_minSampleLag * m_streamsPerSample) {
-        m_data.resize(2 * m_minSampleLag * m_streamsPerSample, 0.f);
-    }
 }
 
 void AudioBuffer::fillup()
@@ -120,20 +91,35 @@ void AudioBuffer::fillup()
     }
 
     while (sampleLag() < m_minSampleLag + FILL_OVER) {
-        m_source->setBufferSize(FILL_SAMPLES);
-        m_source->forward(FILL_SAMPLES);
-        push(m_source->data(), FILL_SAMPLES);
+        m_source->process(m_data.data() + m_writeIndex, FILL_SAMPLES);
+        updateWriteIndex(FILL_SAMPLES);
+    }
+}
+
+void AudioBuffer::updateWriteIndex(const unsigned int samplesPerChannel)
+{
+    size_t from = m_writeIndex;
+
+    auto to = m_writeIndex + samplesPerChannel * m_audioChannelsCount;
+    if (to > m_data.size()) {
+        to = m_data.size() - 1;
+    }
+    auto count = to - from;
+    m_writeIndex += count;
+
+    if (m_writeIndex >= m_data.size()) {
+        m_writeIndex -= m_data.size();
     }
 }
 
 unsigned int AudioBuffer::sampleLag() const
 {
-    unsigned int lag = 0;
+    size_t lag = 0;
     if (m_readIndex <= m_writeIndex) {
         lag = m_writeIndex - m_readIndex;
     } else {
         lag = m_writeIndex + m_data.size() - m_readIndex;
     }
 
-    return lag / m_streamsPerSample;
+    return lag / m_audioChannelsCount;
 }

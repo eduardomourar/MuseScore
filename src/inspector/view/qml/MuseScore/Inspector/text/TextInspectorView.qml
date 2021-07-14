@@ -26,12 +26,13 @@ import MuseScore.UiComponents 1.0
 import MuseScore.Ui 1.0
 import MuseScore.Inspector 1.0
 import "../common"
+import "../general/playback"
 
 InspectorSectionView {
     id: root
 
     implicitHeight: contentColumn.height
-    contentHeight: implicitHeight + textAdvancedSettingsButton.popupContentHeight
+    contentHeight: implicitHeight
 
     Column {
         id: contentColumn
@@ -44,15 +45,23 @@ InspectorSectionView {
         InspectorPropertyView {
             titleText: qsTrc("inspector", "Font")
 
+            navigation.panel: root.navigationPanel
+            navigation.name: "FontMenu"
+            navigation.row: root.navigationRow(1)
+
             propertyItem: root.model ? root.model.fontFamily : null
 
-            StyledComboBox {
+            Dropdown {
                 id: fontFamilyComboBox
+
+                navigation.panel: root.navigationPanel
+                navigation.name: "FontFamily"
+                navigation.row: root.navigationRow(2)
 
                 width: parent.width
 
-                textRoleName: "text"
-                valueRoleName: textRoleName
+                textRole: "text"
+                valueRole: "text"
 
                 model: {
                     var resultList = []
@@ -66,10 +75,10 @@ InspectorSectionView {
                     return resultList
                 }
 
-                currentIndex: root.model && !root.model.fontFamily.isUndefined ? indexOfValue(root.model.fontFamily.value) : -1
+                currentIndex: root.model && !root.model.fontFamily.isUndefined ? fontFamilyComboBox.indexOfValue(root.model.fontFamily.value) : -1
 
-                onValueChanged: {
-                    root.model.fontFamily.value = value
+                onCurrentValueChanged: {
+                    root.model.fontFamily.value = fontFamilyComboBox.currentValue
                 }
             }
         }
@@ -82,6 +91,10 @@ InspectorSectionView {
                 anchors.left: parent.left
                 anchors.right: parent.horizontalCenter
                 anchors.rightMargin: 2
+
+                navigation.panel: root.navigationPanel
+                navigation.name: "StyleMenu"
+                navigation.row: root.navigationRow(3)
 
                 titleText: qsTrc("inspector", "Style")
                 propertyItem: root.model ? root.model.fontStyle : null
@@ -98,10 +111,13 @@ InspectorSectionView {
 
                     delegate: FlatToggleButton {
 
+                        navigation.panel: root.navigationPanel
+                        navigation.name: "FontStyle"+model.index
+                        navigation.row: root.navigationRow(model.index + 4)
+
                         icon: modelData["iconRole"]
 
-                        checked: root.model && !root.model.fontStyle.isUndefined ? root.model.fontStyle.value & modelData["valueRole"]
-                                                                                 : false
+                        checked: root.model && !root.model.fontStyle.isUndefined ? root.model.fontStyle.value & modelData["valueRole"] : false
 
                         backgroundColor: ui.theme.backgroundPrimaryColor
 
@@ -118,14 +134,21 @@ InspectorSectionView {
                 anchors.leftMargin: 2
                 anchors.right: parent.right
 
+                navigation.panel: root.navigationPanel
+                navigation.name: "SizeMenu"
+                navigation.row: root.navigationRow(7)
+
                 titleText: qsTrc("inspector", "Size")
                 propertyItem: root.model ? root.model.fontSize : null
 
-                StyledComboBox {
+                Dropdown {
+                    id: sizes
+
                     width: parent.width
 
-                    textRoleName: "text"
-                    valueRoleName: "value"
+                    navigation.panel: root.navigationPanel
+                    navigation.name: "Size"
+                    navigation.row: root.navigationRow(8)
 
                     model: [
                         { text: "8",  value: 8 },
@@ -142,10 +165,10 @@ InspectorSectionView {
                         { text: "48", value: 48 }
                     ]
 
-                    currentIndex: root.model && !root.model.fontSize.isUndefined ? indexOfValue(root.model.fontSize.value) : -1
+                    currentIndex: root.model && !root.model.fontSize.isUndefined ? sizes.indexOfValue(root.model.fontSize.value) : -1
 
-                    onValueChanged: {
-                        root.model.fontSize.value = value
+                    onCurrentValueChanged: {
+                        root.model.fontSize.value = sizes.currentValue
                     }
                 }
             }
@@ -154,6 +177,10 @@ InspectorSectionView {
         InspectorPropertyView {
             titleText: qsTrc("inspector", "Alignment")
             propertyItem: root.model ? root.model.horizontalAlignment : null
+
+            navigation.panel: root.navigationPanel
+            navigation.name: "AlignmentMenu"
+            navigation.row: root.navigationRow(9)
 
             Item {
                 height: childrenRect.height
@@ -175,6 +202,10 @@ InspectorSectionView {
                     ]
 
                     delegate: FlatRadioButton {
+
+                        navigation.panel: root.navigationPanel
+                        navigation.name: "HAlign"+model.index
+                        navigation.row: root.navigationRow(model.index + 10)
 
                         width: 30
 
@@ -213,6 +244,10 @@ InspectorSectionView {
 
                     delegate: FlatRadioButton {
 
+                        navigation.panel: root.navigationPanel
+                        navigation.name: "VAlign"+model.index
+                        navigation.row: root.navigationRow(model.index + 13)
+
                         width: 30
 
                         ButtonGroup.group: verticalAlignmentButtonList.radioButtonGroup
@@ -237,11 +272,16 @@ InspectorSectionView {
         FlatButton {
             width: parent.width
 
+            navigation.panel: root.navigationPanel
+            navigation.name: "Insert special charachters"
+            navigation.row: root.navigationRow(18)
+
             text: qsTrc("inspector", "Insert special charachters")
 
             visible: root.model ? root.model.isSpecialCharactersInsertionAvailable : false
 
             onClicked: {
+                console.log("charachters y: " + y)
                 if (root.model) {
                     root.model.insertSpecialCharacters()
                 }
@@ -251,10 +291,11 @@ InspectorSectionView {
         TextAdvancedSettings {
             id: textAdvancedSettingsButton
 
-            width: contentColumn.width
-            popupAvailableWidth: contentColumn.width
-            popupPositionX: mapToGlobal(contentColumn.x, contentColumn.y).x - mapToGlobal(x, y).x
+            navigation.panel: root.navigationPanel
+            navigation.name: "TextAdvancedSettings"
+            navigation.row: root.navigationRow(19)
 
+            width: contentColumn.width
             model: root.model
         }
     }

@@ -27,6 +27,7 @@
 #include "iexcerptnotation.h"
 #include "retval.h"
 #include "io/path.h"
+#include "io/device.h"
 
 namespace mu::notation {
 using ExcerptNotationList = std::vector<IExcerptNotationPtr>;
@@ -37,16 +38,12 @@ public:
     virtual INotationPtr notation() = 0;
 
     virtual Meta metaInfo() const = 0;
+    virtual void setMetaInfo(const Meta& meta) = 0;
 
-    virtual Ret load(const io::path& path) = 0;
-    virtual io::path path() const = 0;
-
-    virtual Ret createNew(const ScoreCreateOptions& scoreInfo) = 0;
     virtual RetVal<bool> created() const = 0;
-
-    virtual Ret save(const io::path& path = io::path(), SaveMode saveMode = SaveMode::Save) = 0;
     virtual ValNt<bool> needSave() const = 0;
 
+    virtual IExcerptNotationPtr newExcerptNotation() const = 0;
     virtual ValCh<ExcerptNotationList> excerpts() const = 0;
     virtual void setExcerpts(const ExcerptNotationList& excerpts) = 0;
 

@@ -24,6 +24,7 @@
 
 #include "modularity/imoduleexport.h"
 #include "inavigation.h"
+#include "async/notification.h"
 
 namespace mu::ui {
 class INavigationController : MODULE_EXPORT_INTERFACE
@@ -37,6 +38,14 @@ public:
     virtual void unreg(INavigationSection* section) = 0;
 
     virtual const std::set<INavigationSection*>& sections() const = 0;
+
+    virtual bool requestActivateByName(const std::string& section, const std::string& panel, const std::string& control) = 0;
+
+    virtual INavigationSection* activeSection() const = 0;
+    virtual INavigationPanel* activePanel() const = 0;
+    virtual INavigationControl* activeControl() const = 0;
+
+    virtual async::Notification navigationChanged() const = 0;
 };
 }
 

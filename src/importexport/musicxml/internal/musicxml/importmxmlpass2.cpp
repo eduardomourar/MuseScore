@@ -85,7 +85,7 @@
 namespace Ms {
 static std::shared_ptr<mu::iex::musicxml::IMusicXmlConfiguration> configuration()
 {
-    return mu::framework::ioc()->resolve<mu::iex::musicxml::IMusicXmlConfiguration>("iex_musicxml");
+    return mu::modularity::ioc()->resolve<mu::iex::musicxml::IMusicXmlConfiguration>("iex_musicxml");
 }
 
 //---------------------------------------------------------
@@ -713,13 +713,13 @@ namespace xmlpass2 {
 static QString decodeEntities(const QString& src)
 {
     QString ret(src);
-    QRegExp re("&#([0-9]+);");
-    re.setMinimal(true);
+    QRegularExpression re("&#([0-9]+);", QRegularExpression::InvertedGreedinessOption);
 
     int pos = 0;
-    while ((pos = re.indexIn(src, pos)) != -1) {
-        ret = ret.replace(re.cap(0), QChar(re.cap(1).toInt(0, 10)));
-        pos += re.matchedLength();
+    QRegularExpressionMatch match;
+    while ((pos = src.indexOf(re, pos, &match)) != -1) {
+        ret = ret.replace(match.capturedTexts()[0], QChar(match.capturedTexts()[1].toInt(0, 10)));
+        pos += match.capturedLength();
     }
     return ret;
 }
@@ -1625,8 +1625,9 @@ void MusicXMLParserPass2::scorePartwise()
     }
     // set last measure barline to normal or MuseScore will generate light-heavy EndBarline
     // TODO, handle other tracks?
-    if (_score->lastMeasure()->endBarLineType() == BarLineType::NORMAL) {
-        _score->lastMeasure()->setEndBarLineType(BarLineType::NORMAL, 0);
+    auto lm = _score->lastMeasure();
+    if (lm && lm->endBarLineType() == BarLineType::NORMAL) {
+        lm->setEndBarLineType(BarLineType::NORMAL, 0);
     }
 }
 
@@ -2834,36 +2835,36 @@ void MusicXMLParserDirection::dynamics()
 static QString matchRepeat(const QString& lowerTxt)
 {
     QString repeat;
-    QRegExp daCapo("d\\.? *c\\.?|da *capo");
-    QRegExp daCapoAlFine("d\\.? *c\\.? *al *fine|da *capo *al *fine");
-    QRegExp daCapoAlCoda("d\\.? *c\\.? *al *coda|da *capo *al *coda");
-    QRegExp dalSegno("d\\.? *s\\.?|d[ae]l *segno");
-    QRegExp dalSegnoAlFine("d\\.? *s\\.? *al *fine|d[ae]l *segno *al *fine");
-    QRegExp dalSegnoAlCoda("d\\.? *s\\.? *al *coda|d[ae]l *segno *al *coda");
-    QRegExp fine("fine");
-    QRegExp toCoda("to *coda");
-    if (daCapo.exactMatch(lowerTxt)) {
+    QRegularExpression daCapo(QRegularExpression::anchoredPattern("d\\.? *c\\.?|da *capo"));
+    QRegularExpression daCapoAlFine(QRegularExpression::anchoredPattern("d\\.? *c\\.? *al *fine|da *capo *al *fine"));
+    QRegularExpression daCapoAlCoda(QRegularExpression::anchoredPattern("d\\.? *c\\.? *al *coda|da *capo *al *coda"));
+    QRegularExpression dalSegno(QRegularExpression::anchoredPattern("d\\.? *s\\.?|d[ae]l *segno"));
+    QRegularExpression dalSegnoAlFine(QRegularExpression::anchoredPattern("d\\.? *s\\.? *al *fine|d[ae]l *segno *al *fine"));
+    QRegularExpression dalSegnoAlCoda(QRegularExpression::anchoredPattern("d\\.? *s\\.? *al *coda|d[ae]l *segno *al *coda"));
+    QRegularExpression fine(QRegularExpression::anchoredPattern("fine"));
+    QRegularExpression toCoda(QRegularExpression::anchoredPattern("to *coda"));
+    if (daCapo.match(lowerTxt).hasMatch()) {
         repeat = "daCapo";
     }
-    if (daCapoAlFine.exactMatch(lowerTxt)) {
+    if (daCapoAlFine.match(lowerTxt).hasMatch()) {
         repeat = "daCapoAlFine";
     }
-    if (daCapoAlCoda.exactMatch(lowerTxt)) {
+    if (daCapoAlCoda.match(lowerTxt).hasMatch()) {
         repeat = "daCapoAlCoda";
     }
-    if (dalSegno.exactMatch(lowerTxt)) {
+    if (dalSegno.match(lowerTxt).hasMatch()) {
         repeat = "dalSegno";
     }
-    if (dalSegnoAlFine.exactMatch(lowerTxt)) {
+    if (dalSegnoAlFine.match(lowerTxt).hasMatch()) {
         repeat = "dalSegnoAlFine";
     }
-    if (dalSegnoAlCoda.exactMatch(lowerTxt)) {
+    if (dalSegnoAlCoda.match(lowerTxt).hasMatch()) {
         repeat = "dalSegnoAlCoda";
     }
-    if (fine.exactMatch(lowerTxt)) {
+    if (fine.match(lowerTxt).hasMatch()) {
         repeat = "fine";
     }
-    if (toCoda.exactMatch(lowerTxt)) {
+    if (toCoda.match(lowerTxt).hasMatch()) {
         repeat = "toCoda";
     }
     return repeat;
@@ -3027,11 +3028,11 @@ void MusicXMLParserDirection::bracket(const QString& type, const int number,
         }
 
         if (lineType == "solid") {
-            b->setLineStyle(Qt::SolidLine);
+            b->setLineStyle(mu::draw::PenStyle::SolidLine);
         } else if (lineType == "dashed") {
-            b->setLineStyle(Qt::DashLine);
+            b->setLineStyle(mu::draw::PenStyle::DashLine);
         } else if (lineType == "dotted") {
-            b->setLineStyle(Qt::DotLine);
+            b->setLineStyle(mu::draw::PenStyle::DotLine);
         } else {
             _logger->logError(QString("unsupported line-type: %1").arg(lineType.toString()), &_e);
         }
@@ -3072,7 +3073,7 @@ void MusicXMLParserDirection::dashes(const QString& type, const int number,
 
         b->setBeginHookType(HookType::NONE);
         b->setEndHookType(HookType::NONE);
-        b->setLineStyle(Qt::DashLine);
+        b->setLineStyle(mu::draw::PenStyle::DashLine);
         // TODO brackets and dashes now share the same storage
         // because they both use ElementType::TEXTLINE
         // use mxml specific type instead
@@ -5073,6 +5074,11 @@ FiguredBass* MusicXMLParserPass2::figuredBass()
 /**
  Parse the /score-partwise/part/measure/harmony/frame node.
  Return the result as a FretDiagram.
+  Notes:
+ - MusicXML's first-fret is a positive integer equivalent to MuseScore's FretDiagram::_fretOffset
+ - it is one-based in MusicXML and zero-based in MuseScore
+ - in MusicXML fret numbers are absolute, in MuseScore they are relative to the fretOffset,
+   which affects both single strings and barres
  */
 
 FretDiagram* MusicXMLParserPass2::frame()
@@ -5086,10 +5092,19 @@ FretDiagram* MusicXMLParserPass2::frame()
     std::map<int, int> bEnds;
 
     while (_e.readNextStartElement()) {
-        if (_e.name() == "frame-frets") {
+        if (_e.name() == "first-fret") {
+            bool ok{};
+            int val = _e.readElementText().toInt(&ok);
+            if (ok && val > 0) {
+                fd->setFretOffset(val - 1);
+            } else {
+                _logger->logError(QString("FretDiagram::readMusicXML: illegal first-fret %1").arg(val), &_e);
+            }
+        } else if (_e.name() == "frame-frets") {
             int val = _e.readElementText().toInt();
             if (val > 0) {
-                fd->setFrets(val);
+                fd->setProperty(Pid::FRET_FRETS, val);
+                fd->setPropertyFlags(Pid::FRET_FRETS, PropertyFlags::UNSTYLED);
             } else {
                 _logger->logError(QString("FretDiagram::readMusicXML: illegal frame-fret %1").arg(val), &_e);
             }
@@ -5124,7 +5139,10 @@ FretDiagram* MusicXMLParserPass2::frame()
                 if (fret == 0) {
                     fd->setMarker(actualString, FretMarkerType::CIRCLE);
                 } else if (fret > 0) {
-                    fd->setDot(actualString, fret, true);
+                    if (fd->marker(actualString).mtype == FretMarkerType::CROSS) {
+                        fd->setMarker(actualString, FretMarkerType::NONE);
+                    }
+                    fd->setDot(actualString, fret - fd->fretOffset(), true);
                 }
             } else {
                 _logger->logError(QString("FretDiagram::readMusicXML: illegal frame-note string %1").arg(string), &_e);
@@ -5156,7 +5174,7 @@ FretDiagram* MusicXMLParserPass2::frame()
         }
 
         int endString = bEnds[fret];
-        fd->setBarre(startString, endString, fret);
+        fd->setBarre(startString, endString, fret - fd->fretOffset());
     }
 
     return fd;
@@ -5530,7 +5548,8 @@ void MusicXMLParserLyric::parse()
     //qDebug("formatted lyric '%s'", qPrintable(formattedText));
     lyric->setXmlText(formattedText);
     if (lyricColor != QColor::Invalid) {
-        lyric->setColor(lyricColor);
+        lyric->setProperty(Pid::COLOR, lyricColor);
+        lyric->setPropertyFlags(Pid::COLOR, PropertyFlags::UNSTYLED);
     }
 
     const auto l = lyric.release();
@@ -5845,7 +5864,6 @@ void MusicXMLParserNotations::technical()
                                                                  _e.attributes(), "technical");
             notation.setText(_e.readElementText());
             _notations.push_back(notation);
-            _e.readNext();
         } else if (_e.name() == "harmonic") {
             harmonic();
             _e.readNext();
@@ -6065,7 +6083,7 @@ static void addArticLaissezVibrer(const Note* const note)
 {
     Q_ASSERT(note);
     auto chord = note->chord();
-    if (!hasLaissezVibrer(chord)) {
+    if (!findLaissezVibrer(chord)) {
         Articulation* na = new Articulation(SymId::articLaissezVibrerBelow, chord->score());
         chord->add(na);
     }

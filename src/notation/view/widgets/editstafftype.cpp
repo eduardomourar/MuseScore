@@ -27,13 +27,17 @@
 #include "libmscore/staff.h"
 #include "libmscore/stringdata.h"
 
-#include "widgetstatestore.h"
-#include "internal/mscznotationreader.h"
+#include "engraving/scoreaccess.h"
+#include "engraving/compat/mscxcompat.h"
 
-#include "log.h"
+#include "widgetstatestore.h"
+
 #include "notationerrors.h"
 
+#include "log.h"
+
 using namespace mu::notation;
+using namespace mu::engraving;
 
 const char* g_groupNames[Ms::STAFF_GROUP_MAX] = {
     QT_TRANSLATE_NOOP("staff group header name", "STANDARD STAFF"),
@@ -85,7 +89,7 @@ EditStaffType::EditStaffType(QWidget* parent)
     }
 
     // load a sample standard score in preview
-    Ms::MasterScore* sc = new Ms::MasterScore(Ms::MScore::defaultStyle());
+    Ms::MasterScore* sc = mu::engraving::ScoreAccess::createMasterScore(Ms::MScore::defaultStyle());
     if (loadScore(sc, ":/view/resources/data/std_sample.mscx")) {
         standardPreview->setScore(sc);
     } else {
@@ -93,7 +97,7 @@ EditStaffType::EditStaffType(QWidget* parent)
     }
 
     // load a sample tabulature score in preview
-    sc = new Ms::MasterScore(Ms::MScore::defaultStyle());
+    sc = mu::engraving::ScoreAccess::createMasterScore(Ms::MScore::defaultStyle());
     if (loadScore(sc, ":/view/resources/data/tab_sample.mscx")) {
         tabPreview->setScore(sc);
     } else {
@@ -158,7 +162,7 @@ void EditStaffType::setStaffType(const Ms::StaffType* stafftype)
     setValues();
 }
 
-void EditStaffType::setInstrument(const instruments::Instrument instrument)
+void EditStaffType::setInstrument(const Instrument& instrument)
 {
     // template combo
 
@@ -188,16 +192,13 @@ mu::Ret EditStaffType::loadScore(Ms::MasterScore* score, const mu::io::path& pat
 
 mu::Ret EditStaffType::doLoadScore(Ms::MasterScore* score, const mu::io::path& path) const
 {
-    MsczNotationReader reader;
-
     QFileInfo fi(path.toQString());
     score->setName(fi.completeBaseName());
     score->setImportedFilePath(fi.filePath());
     score->setMetaTag("originalFormat", fi.suffix().toLower());
 
-    Ret ret = reader.read(score, path);
-    if (!ret) {
-        return ret;
+    if (compat::loadMsczOrMscx(score, path.toQString()) != Ms::Score::FileError::FILE_NO_ERROR) {
+        return make_ret(Ret::Code::UnknownError);
     }
 
     score->connectTies();
@@ -218,8 +219,7 @@ mu::Ret EditStaffType::doLoadScore(Ms::MasterScore* score, const mu::io::path& p
     score->update();
 
     if (!score->sanityCheck(QString())) {
-        LOGE() << "Failed load score";
-        return make_ret(Err::FileCorrupted);
+        return make_ret(Err::FileCorrupted, path);
     }
 
     return make_ret(Ret::Code::Ok);

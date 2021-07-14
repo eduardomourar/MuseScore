@@ -30,16 +30,18 @@ StyledPopupView {
     id: root
 
     property alias model: view.model
-    property int itemWidth: 300
+    property int minimumMenuWidth: 178
 
     signal handleAction(string actionCode, int actionIndex)
 
-    contentWidth: root.itemWidth
-    contentHeight: view.childrenRect.height
-    padding: 0
-    margins: 0
     x: 0
-    y: opensUpward ? -root.height : parent.height
+    y: parent.height
+
+    contentWidth: prv.itemWidth
+
+    padding: 8
+    margins: 0
+    showArrow: false
 
     animationEnabled: false //! NOTE disabled - because trouble with simultaneous opening of submenu
 
@@ -49,7 +51,7 @@ StyledPopupView {
     function focusOnFirstItem() {
         var loader = view.itemAtIndex(0)
         if (loader && loader.item) {
-            loader.item.navigation.forceActive()
+            loader.item.navigation.requestActive()
         }
     }
 
@@ -57,7 +59,7 @@ StyledPopupView {
         for (var i = 0; i < view.count; ++i) {
             var loader = view.itemAtIndex(i)
             if (loader && loader.item && loader.item.isSelected) {
-                loader.item.navigation.forceActive()
+                loader.item.navigation.requestActive()
                 return true
             }
         }
@@ -70,49 +72,114 @@ StyledPopupView {
         prv.hasItemsWithSubmenu = false
         prv.hasItemsWithShortcut = false
 
-        for (let i = 0; i < model.length; i++) {
-            let modelData = model[i]
-            let hasIcon = (Boolean(modelData.icon) && modelData.icon !== IconCode.NONE)
+        //! NOTE Policy:
+        //! - if the menu contains checkable items, space for the checkmarks is reserved
+        //! - if the menu contains items with an icon, space for icons is reserved
+        //! - selectable items that don't have an icon are treated as checkable
+        //! - selectable items that do have an icon are treated as non-checkable
+        //! - all selectable items that are selected get an accent color background
 
-            if (modelData.checkable && hasIcon) {
+        for (let i = 0; i < model.length; i++) {
+            let item = model[i]
+            let hasIcon = (Boolean(item.icon) && item.icon !== IconCode.NONE)
+
+            if (item.checkable && hasIcon) {
                 prv.hasItemsWithIconAndCheckable = true
                 prv.hasItemsWithIconOrCheckable = true
-            } else if (modelData.checkable || hasIcon) {
+            } else if (item.checkable || hasIcon || item.selectable) {
                 prv.hasItemsWithIconOrCheckable = true
             }
 
-            if (Boolean(modelData.subitems) && modelData.subitems.length > 0) {
+            if (Boolean(item.subitems) && item.subitems.length > 0) {
                 prv.hasItemsWithSubmenu = true
             }
 
-            if (Boolean(modelData.shortcut)) {
+            if (Boolean(item.shortcut)) {
                 prv.hasItemsWithShortcut = true
             }
         }
+
+        let leftWidth = 0
+        let rightWidth = 0
+
+        for (let j = 0; j < model.length; j++) {
+            prv.testItem.modelData = model[j]
+            leftWidth = Math.max(leftWidth, prv.testItem.calculatedLeftPartWidth())
+            rightWidth = Math.max(rightWidth, prv.testItem.calculatedRightPartWidth())
+        }
+
+        prv.itemLeftPartWidth = leftWidth
+        prv.itemRightPartWidth = rightWidth
+
+        //! NOTE: Due to the fact that the view has a dynamic delegate,
+        //  the height calculation occurs with an error
+        //  (by default, the delegate height is taken as the menu item height).
+        //  Let's manually adjust the height of the content
+        var sepCount = 0
+        for (let k = 0; k < model.length; k++) {
+            if (!Boolean(model[k].title)) {
+                sepCount++
+            }
+        }
+
+        var itemHeight = (view.contentHeight - view.spacing * (model.length - 1)) / model.length
+        root.contentHeight = view.contentHeight - sepCount * (itemHeight - prv.separatorHeight) +
+                prv.viewVerticalMargin * 2
     }
 
     QtObject {
         id: prv
+
         property bool hasItemsWithIconAndCheckable: false
         property bool hasItemsWithIconOrCheckable: false
         property bool hasItemsWithSubmenu: false
         property bool hasItemsWithShortcut: false
+
+        property int itemLeftPartWidth: 100
+        property int itemRightPartWidth: 100
+        readonly property int itemWidth:
+            Math.max(itemLeftPartWidth + itemRightPartWidth, root.minimumMenuWidth)
+
+        readonly property int separatorHeight: 1
+        readonly property int viewVerticalMargin: 4
+
+        readonly property int iconAndCheckMarkMode: {
+            if (prv.hasItemsWithIconAndCheckable) {
+                return StyledMenuItem.ShowBoth
+            } else if (prv.hasItemsWithIconOrCheckable) {
+                return StyledMenuItem.ShowOne
+            }
+            return StyledMenuItem.None
+        }
+
+        property StyledMenuItem testItem: StyledMenuItem {
+            iconAndCheckMarkMode: prv.iconAndCheckMarkMode
+
+            reserveSpaceForShortcutOrSubmenuIndicator:
+                prv.hasItemsWithShortcut || prv.hasItemsWithSubmenu
+        }
     }
 
     ListView {
         id: view
+
         anchors.fill: parent
-        spacing: 2
+        anchors.topMargin: prv.viewVerticalMargin
+        anchors.bottomMargin: prv.viewVerticalMargin
+
+        spacing: 0
         interactive: false
 
         delegate: Loader {
             id: loader
 
-            sourceComponent: Boolean(modelData.title) ? menuItemComp : separatorComp
+            property bool isSeparator: Boolean(modelData.title)
+
+            sourceComponent: isSeparator ? menuItemComp : separatorComp
 
             onLoaded: {
-                loader.item.modelData = modelData
-                loader.item.width = root.itemWidth
+                loader.item.modelData = Qt.binding(() => (modelData))
+                loader.item.width = Qt.binding(() => (prv.itemWidth))
             }
 
             Component {
@@ -125,17 +192,12 @@ StyledPopupView {
                     navigation.column: 0
                     navigation.row: model.index
 
-                    iconAndCheckMarkMode: {
-                        if (prv.hasItemsWithIconAndCheckable) {
-                            return StyledMenuItem.ShowBoth
-                        } else if (prv.hasItemsWithIconOrCheckable) {
-                            return StyledMenuItem.ShowOne
-                        }
-                        return StyledMenuItem.None
-                    }
+                    iconAndCheckMarkMode: prv.iconAndCheckMarkMode
 
                     reserveSpaceForShortcutOrSubmenuIndicator:
-                        prv.hasItemsWithSubmenu || prv.hasItemsWithShortcut
+                        prv.hasItemsWithShortcut || prv.hasItemsWithSubmenu
+
+                    padding: root.padding
 
                     onSubMenuShowed: {
                         root.closePolicy = PopupView.NoAutoClose
@@ -151,6 +213,10 @@ StyledPopupView {
 
                         root.handleAction(actionCode, actionIndex)
                     }
+
+                    onRequestParentItemActive: {
+                        root.navigationParentControl.requestActive()
+                    }
                 }
             }
 
@@ -158,7 +224,7 @@ StyledPopupView {
                 id: separatorComp
 
                 Rectangle {
-                    height: 1
+                    height: prv.separatorHeight
                     color: ui.theme.strokeColor
 
                     property var modelData
