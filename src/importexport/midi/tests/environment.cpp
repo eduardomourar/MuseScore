@@ -28,6 +28,8 @@
 #include "engraving/dom/instrtemplate.h"
 #include "engraving/dom/mscore.h"
 
+#include "engraving/tests/utils/scorerw.h"
+
 #include "log.h"
 
 static muse::testing::SuiteEnvironment importexport_se(
@@ -39,10 +41,12 @@ static muse::testing::SuiteEnvironment importexport_se(
     []() {
     LOGI() << "midi tests suite post init";
 
+    mu::engraving::ScoreRW::setRootPath(muse::String::fromUtf8(iex_midi_tests_DATA_ROOT));
+
     mu::engraving::MScore::testMode = true;
     mu::engraving::MScore::noGui = true;
 
-    mu::engraving::loadInstrumentTemplates(":/data/instruments.xml");
+    mu::engraving::loadInstrumentTemplates(":/engraving/instruments/instruments.xml");
 
     LOGW() << "WARNING: actually all MIDI import/export tests are disabled!";
 }
